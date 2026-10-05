@@ -1,0 +1,1967 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070A16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AHIS RRIT">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js">
+<title>AHIS RRIT — Resource Room Inventory Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<style>
+:root{
+  --bg:#070A16; --text:#EEF2FB; --muted:#A3ADC8;
+  --glass:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.03));
+  --glass-solid:rgba(22,29,56,.72);
+  --line:rgba(170,190,240,.16); --line-hi:rgba(255,255,255,.14);
+  --field:rgba(255,255,255,.05);
+  --accent:#4C7DFF; --accent-t:#A9BEFF;
+  --amber:#F5A524; --amber-t:#F7BB5C; --red-t:#FCA5A5; --green:#3DDC97;
+  --r:18px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+body{background:transparent}
+html,body{margin:0;min-height:100%;color:var(--text);font-family:Manrope,system-ui,sans-serif;font-size:15px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+button:disabled{cursor:not-allowed;opacity:.42}
+:focus-visible{outline:2px solid var(--accent-t);outline-offset:2px}
+
+/* ambient light behind the glass */
+#bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+#bg i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5}
+#bg i:nth-child(1){width:420px;height:420px;left:-120px;top:-140px;background:#2F55FF;animation:drift 22s ease-in-out infinite alternate}
+#bg i:nth-child(2){width:380px;height:380px;right:-140px;top:18%;background:#7B3CFF;opacity:.38;animation:drift 26s ease-in-out infinite alternate-reverse}
+#bg i:nth-child(3){width:360px;height:360px;left:10%;bottom:-160px;background:#00B8A9;opacity:.28;animation:drift 30s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate(60px,50px) scale(1.12)}}
+
+#app{max-width:440px;margin:0 auto;min-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;position:relative}
+@media (min-width:600px) and (max-width:899px){
+  #app{margin:24px auto;min-height:calc(100dvh - 48px);border:1px solid var(--line-hi);border-radius:38px;overflow:hidden;
+       background:rgba(10,14,30,.45);box-shadow:0 40px 120px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08)}
+}
+.screen{flex:1;padding:22px 20px 28px;display:flex;flex-direction:column;gap:18px}
+.fwd{animation:inR .32s cubic-bezier(.2,.8,.2,1) both}
+.back{animation:inL .32s cubic-bezier(.2,.8,.2,1) both}
+.fade{animation:fadeUp .34s cubic-bezier(.2,.8,.2,1) both}
+@keyframes inR{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes inL{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.stagger>*{animation:fadeUp .38s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * 40ms)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+h1,h2,h3{margin:0;font-family:Outfit,sans-serif;font-weight:600;letter-spacing:-.01em}
+.h1{font-size:27px;line-height:1.15}
+.h2{font-size:18px}
+.muted{color:var(--muted);margin:4px 0 0;font-size:14px;line-height:1.45}
+.empty{color:var(--muted);text-align:center;padding:40px 10px;display:flex;flex-direction:column;align-items:center;gap:12px}
+
+/* glass surfaces — solid-ish so it stays smooth on cheap phones */
+.card{background:var(--glass),rgba(18,24,48,.55);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:inset 0 1px 0 var(--line-hi),0 10px 30px rgba(0,0,0,.22)}
+
+.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.top{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px}
+.top .t{text-align:center;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.page-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.icon-btn{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--glass),rgba(18,24,48,.6);border:1px solid var(--line);transition:transform .15s}
+.icon-btn:active{transform:scale(.92)}
+.icon-btn.sm{width:34px;height:34px;border-radius:10px;background:transparent;border:0;color:var(--muted)}
+.icon-btn.fav{color:#FF7A90}
+.icon-btn.danger{color:var(--red-t)}
+.icon-btn.primary{background:linear-gradient(180deg,#5B8CFF,#3A64E8);border-color:transparent;color:#fff}
+.avatar{width:42px;height:42px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;font-weight:800;font-size:13px;color:var(--accent-t);
+  background:rgba(76,125,255,.14);border:1px solid rgba(169,190,255,.32)}
+.link{color:var(--accent-t);font-weight:700;font-size:14px;padding:10px 4px}
+.brand{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--accent-t);letter-spacing:.06em}
+.brand i{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+
+.search{display:flex;align-items:center;gap:10px;height:50px;padding:0 16px;border-radius:15px;background:var(--field);border:1px solid var(--line);color:var(--muted)}
+.search input{flex:1;min-width:0;border:0;background:transparent;outline:none;color:var(--text);font-size:15px}
+
+.cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cat{position:relative;height:120px;border-radius:20px;overflow:hidden;text-align:left;border:1px solid rgba(255,255,255,.16);
+  background:linear-gradient(145deg,var(--g1),var(--g2));transition:transform .18s;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+.cat:active{transform:scale(.96)}
+.cat::before{content:"";position:absolute;inset:0 0 52% 0;background:linear-gradient(180deg,rgba(255,255,255,.32),transparent)}
+.cat::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 38%,rgba(5,8,20,.72))}
+.cat .cat-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cat::before,.cat::after{z-index:1}
+.cat .cat-art{z-index:2;position:absolute;right:12px;top:12px;color:rgba(255,255,255,.92);filter:drop-shadow(0 6px 12px rgba(0,0,0,.25))}
+.cat-name{position:absolute;left:14px;bottom:25px;z-index:2;font-weight:800;font-size:15px;color:#fff}
+.cat-count{position:absolute;left:14px;bottom:9px;z-index:2;font-size:11px;color:rgba(255,255,255,.8)}
+
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;height:38px;padding:0 15px;border-radius:12px;font-size:13px;font-weight:700;background:var(--field);border:1px solid var(--line);color:var(--muted);transition:all .2s}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 18px rgba(76,125,255,.35)}
+
+.list{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:14px;padding:12px;text-align:left;width:100%;transition:transform .15s}
+button.row:active{transform:scale(.98)}
+.row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.row-main b{font-size:15px}
+.row-main small{color:var(--muted);font-size:12px}
+.row>svg:last-child{color:var(--muted);flex-shrink:0}
+.pill{font-size:11px;font-weight:800;padding:5px 9px;border-radius:99px;white-space:nowrap}
+.pill.amber{background:rgba(245,165,36,.14);color:var(--amber-t)}
+.pill.red{background:rgba(248,113,113,.14);color:var(--red-t)}
+.pill.green{background:rgba(61,220,151,.13);color:var(--green)}
+.pill.blue{background:rgba(76,125,255,.16);color:var(--accent-t)}
+
+.thumb{position:relative;width:62px;height:62px;flex-shrink:0;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.06)}
+.thumb.sm{width:44px;height:44px;border-radius:12px}
+.thumb.xs{width:32px;height:32px;border-radius:9px}
+.thumb.lg{width:84px;height:84px;border-radius:18px}
+.thumb img,.hero-img img{width:100%;height:100%;object-fit:cover;display:block}
+.art{position:absolute;inset:0;background:linear-gradient(140deg,var(--g1),var(--g2))}
+.art i{position:absolute;width:50%;height:62%;left:25%;top:19%;border-radius:12%;box-shadow:0 4px 12px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.55)}
+.art i:nth-child(1){transform:rotate(-17deg) translate(-16%,6%)}
+.art i:nth-child(2){transform:rotate(-3deg)}
+.art i:nth-child(3){transform:rotate(12deg) translate(16%,3%)}
+.art::after{content:"";position:absolute;inset:0 0 55% 0;background:linear-gradient(180deg,rgba(255,255,255,.25),transparent)}
+
+.hero-img{position:relative;height:210px;border-radius:24px;overflow:hidden;border:1px solid var(--line-hi);background:rgba(255,255,255,.05)}
+.hero-img .art i{width:34%;left:33%;top:14%;height:70%}
+.d-head{display:flex;flex-direction:column;gap:4px}
+.avail{margin:0;color:var(--muted)}
+.avail b{color:var(--green)}
+.avail.low b{color:var(--amber-t)}
+.panel{padding:16px;display:flex;flex-direction:column;gap:18px}
+.opt{display:flex;flex-direction:column;gap:10px}
+.opt-h{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);font-weight:700}
+.opt-h b{color:var(--text)}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.sw{width:40px;height:40px;border-radius:50%;padding:3px;border:2px solid transparent;transition:transform .15s,border-color .2s}
+.sw::before{content:"";display:block;width:100%;height:100%;border-radius:50%;background:var(--c);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 4px rgba(0,0,0,.2)}
+.sw.on{border-color:var(--accent-t);transform:scale(1.08)}
+.pills{display:flex;gap:10px;flex-wrap:wrap}
+.pill-btn{height:42px;padding:0 18px;border-radius:12px;background:var(--field);border:1px solid var(--line);font-weight:700;font-size:14px;transition:all .2s}
+.pill-btn.on{background:rgba(76,125,255,.18);border-color:var(--accent);color:var(--accent-t)}
+.stepper{display:flex;align-items:center;justify-content:space-between;height:52px;padding:0 5px;border-radius:14px;background:var(--field);border:1px solid var(--line)}
+.stepper button{width:42px;height:42px;border-radius:11px;background:rgba(255,255,255,.07);font-size:20px;font-weight:700;transition:transform .12s}
+.stepper button:active{transform:scale(.88)}
+.stepper output{font-family:Outfit,sans-serif;font-size:20px;font-weight:600}
+.stepper.mini{height:36px;width:112px;padding:0 3px;border-radius:10px}
+.stepper.mini button{width:30px;height:30px;font-size:16px;border-radius:8px}
+.stepper.mini output{font-size:15px}
+
+.btn{width:100%;height:54px;border-radius:16px;font-weight:800;font-size:16px;color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  background:linear-gradient(180deg,#5B8CFF,#3A64E8);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 12px 28px rgba(58,100,232,.35);transition:transform .15s}
+.btn:active{transform:scale(.97)}
+.btn:disabled{box-shadow:none}
+.btn.ghost{background:var(--field);border:1px solid var(--line);box-shadow:none;color:var(--text)}
+.btn.light{background:#F4F6FB;color:#111827;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+.btn.danger{background:linear-gradient(180deg,#F26B6B,#D94848);box-shadow:0 10px 24px rgba(217,72,72,.3)}
+.btn.sm{height:44px;font-size:14px;border-radius:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.warn{display:flex;align-items:center;gap:8px;margin:0;padding:11px 13px;border-radius:13px;background:rgba(245,165,36,.1);border:1px solid rgba(245,165,36,.25);color:var(--amber-t);font-size:13px;font-weight:700;line-height:1.4}
+.warn.ok{background:rgba(61,220,151,.1);border-color:rgba(61,220,151,.3);color:var(--green)}
+.auth-links{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.auth-links .link{padding:6px 0;font-size:13px}
+.warn.red{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.28);color:var(--red-t)}
+.warn svg{flex-shrink:0}
+
+.field{display:flex;flex-direction:column;gap:7px}
+.field>span{font-size:13px;font-weight:700;color:var(--muted)}
+.input,.field input,.field select{height:50px;padding:0 14px;border-radius:14px;background:var(--field);border:1px solid var(--line);color:var(--text);font-size:15px;outline:none;width:100%}
+.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23A3ADC8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+.field select option{background:#141B34}
+.input:focus,.field input:focus,.field select:focus{border-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.photo-box{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:150px;border-radius:20px;border:1.5px dashed rgba(169,190,255,.4);background:rgba(76,125,255,.05);color:var(--accent-t);overflow:hidden;position:relative;padding:14px}
+.photo-box>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.photo-box .acts{display:flex;gap:8px;position:relative;z-index:1;flex-wrap:wrap;justify-content:center}
+.file-btn{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 13px;border-radius:11px;background:rgba(14,19,40,.88);border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--text);cursor:pointer}
+.file-btn input{display:none}
+.opt-list{display:flex;flex-direction:column;gap:8px}
+.opt-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:13px;background:var(--field);border:1px solid var(--line);font-size:14px;width:100%;text-align:left}
+.opt-row.on{border-color:var(--accent);background:rgba(76,125,255,.12)}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--c);flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.opt-row .grow{flex:1}
+.quick{display:flex;gap:8px}
+.quick button{flex:1;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--field);font-weight:800;font-size:13px}
+
+.req{padding:14px;display:flex;flex-direction:column;gap:12px;transition:opacity .3s,transform .3s}
+.req.leaving{opacity:0;transform:translateX(40px) scale(.97)}
+.req-h{display:flex;align-items:center;gap:12px}
+.req-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.req-who small,.time{color:var(--muted);font-size:12px}
+.req-items{list-style:none;margin:0;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.22);display:flex;flex-direction:column;gap:7px}
+.req-items li{display:flex;align-items:center;gap:8px;font-size:13px}
+.req-items li b{margin-left:auto;white-space:nowrap}
+.req-items small{color:var(--muted)}
+.reason{margin:0;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:flex-start}
+.reason span{color:var(--text)}
+.decided{margin:0;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}
+.sumrow{display:flex;justify-content:space-between;align-items:center;padding:15px 16px}
+.sumrow b{font-family:Outfit,sans-serif;font-size:18px}
+
+.sent{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding-top:24px}
+.plane{position:relative;width:110px;height:110px;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:radial-gradient(circle at 35% 30%,#7EA2FF,#2F52D6);box-shadow:0 0 0 12px rgba(76,125,255,.12),0 24px 60px rgba(58,100,232,.45);
+  animation:pop .6s cubic-bezier(.2,1.4,.4,1) both}
+.plane svg{animation:fly .9s .2s cubic-bezier(.2,.8,.2,1) both}
+.plane .ok{position:absolute;right:4px;top:6px;width:30px;height:30px;border-radius:50%;background:var(--green);display:grid;place-items:center;color:#063;animation:pop .4s .55s both}
+@keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes fly{from{transform:translate(-26px,26px) scale(.6);opacity:0}to{transform:none;opacity:1}}
+.items-box{width:100%;padding:14px 16px;text-align:left;display:flex;flex-direction:column;gap:10px}
+.mini-row{display:flex;align-items:center;gap:10px;font-size:14px}
+.mini-row b{margin-left:auto}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{position:relative;padding:16px;text-align:left;display:flex;flex-direction:column;gap:6px;min-height:104px;
+  background:linear-gradient(160deg,rgba(76,125,255,.22),rgba(76,125,255,.02)),rgba(18,24,48,.6);transition:transform .15s}
+.stat:active{transform:scale(.97)}
+.stat b{font-family:Outfit,sans-serif;font-size:34px;font-weight:600;line-height:1}
+.stat span{font-size:13px;color:var(--muted);font-weight:600}
+.stat i{position:absolute;right:14px;top:14px;font-style:normal}
+.stat .d{width:20px;height:20px;border-radius:50%;background:var(--amber);color:#1B1203;display:grid;place-items:center;font-size:12px;font-weight:900}
+.stat .tri{color:var(--amber)}
+.menu{display:flex;flex-direction:column;gap:10px}
+.menu .row{padding:16px}
+.menu .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(76,125,255,.14);color:var(--accent-t)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:14px;background:var(--field);border:1px solid var(--line)}
+.tabs.two-col{grid-template-columns:1fr 1fr}
+.tabs button{height:42px;border-radius:10px;font-size:13px;font-weight:800;color:var(--muted);transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.tabs button.on{background:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(76,125,255,.35)}
+.day{font-size:13px;font-weight:800;color:var(--muted);margin:6px 0 -4px}
+.log-row{display:flex;gap:12px;padding:13px 14px;align-items:flex-start}
+
+.nav{position:sticky;bottom:0;z-index:5;display:flex;justify-content:space-around;padding:8px 8px calc(10px + env(safe-area-inset-bottom,0px));
+  background:rgba(9,13,28,.66);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border-top:1px solid var(--line)}
+.nav button{position:relative;flex:1;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:700;color:var(--muted);transition:color .2s}
+.nav button.on{color:var(--accent-t)}
+.nav button.on::before{content:"";position:absolute;top:-8px;width:28px;height:3px;border-radius:3px;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.badge{position:absolute;top:2px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center}
+.badge.amber{background:var(--amber);color:#1B1203}
+.badge.bump{animation:bump .4s}
+@keyframes bump{50%{transform:scale(1.5)}}
+
+/* sign in */
+.login{justify-content:center;gap:20px;padding-top:40px}
+.logo{width:76px;height:76px;border-radius:24px;display:grid;place-items:center;font-family:Outfit,sans-serif;font-weight:700;font-size:20px;letter-spacing:.02em;color:#fff;
+  background:linear-gradient(150deg,#5B8CFF,#6A3CF0);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 20px 50px rgba(76,90,255,.4)}
+.login .school{font-size:13px;color:var(--muted);font-weight:600;margin:6px 0 0}
+.signin-card{padding:18px;display:flex;flex-direction:column;gap:14px}
+.ms{display:grid;grid-template-columns:9px 9px;gap:2px}
+.ms i{width:9px;height:9px}
+.hint{font-size:13px;color:var(--muted);margin:0;line-height:1.45;display:flex;gap:8px;align-items:flex-start}
+.hint svg{flex-shrink:0;margin-top:1px;color:var(--accent-t)}
+.badge-preview{align-self:center;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:rgba(245,165,36,.12);border:1px solid rgba(245,165,36,.3);color:var(--amber-t);font-size:12px;font-weight:800}
+.demo{display:flex;flex-direction:column;gap:8px}
+.demo button{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--field);border:1px solid var(--line);text-align:left;font-size:13px}
+.demo button small{display:block;color:var(--muted);font-size:11px}
+
+/* modal sheet */
+#modal{position:fixed;inset:0;z-index:40;display:none;align-items:flex-end;justify-content:center;background:rgba(3,5,12,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#modal.show{display:flex;animation:fadeIn .2s both}
+@keyframes fadeIn{from{opacity:0}}
+.sheet{width:100%;max-width:440px;margin:0 12px calc(12px + env(safe-area-inset-bottom,0px));padding:22px;border-radius:26px;display:flex;flex-direction:column;gap:14px;
+  background:linear-gradient(180deg,rgba(40,52,96,.9),rgba(20,27,54,.94));border:1px solid var(--line-hi);box-shadow:0 30px 80px rgba(0,0,0,.5);animation:up .32s cubic-bezier(.2,.9,.2,1) both}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sheet p{margin:0;color:var(--muted);line-height:1.5}
+
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:50;
+  display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;max-width:calc(100% - 32px);
+  background:#EEF2FB;color:#0B1020;font-weight:700;font-size:14px;box-shadow:0 16px 40px rgba(0,0,0,.4);transition:all .3s cubic-bezier(.2,.8,.2,1)}
+#toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#toast button{color:#2F52D6;font-weight:800}
+.loading{flex:1;display:grid;place-items:center;color:var(--muted)}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid rgba(169,190,255,.25);border-top-color:var(--accent-t);animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* floors, alerts, returns */
+.floor{display:inline-block;font-size:10px;font-weight:800;padding:3px 7px;border-radius:6px;letter-spacing:.02em;white-space:nowrap}
+.f-G{background:rgba(61,220,151,.15);color:#6BE6B0}
+.f-F{background:rgba(169,140,255,.18);color:#CDBEFF}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.req-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.req-items li{flex-wrap:wrap}
+.req-items .grow{flex:1;min-width:0}
+.mini-link{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--accent-t);padding:6px 0;width:100%;justify-content:flex-end}
+.ok-t{color:var(--green);font-weight:700;width:100%;text-align:right}
+.muted-s{color:var(--muted);font-weight:600}
+.icon-btn.bell{position:relative}
+.icon-btn.bell .badge{top:-6px;left:auto;right:-6px}
+.ic-round{width:40px;height:40px;flex-shrink:0;border-radius:12px;display:grid;place-items:center;background:rgba(76,125,255,.14);color:var(--accent-t)}
+.more-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:42px;margin-top:10px;border-radius:12px;border:1px dashed rgba(169,190,255,.45);background:rgba(76,125,255,.08);color:var(--accent-t);font-size:13px}
+.more-btn b{color:var(--text)}
+.type{display:inline-block;font-size:10px;font-weight:800;padding:3px 7px;border-radius:6px;white-space:nowrap}
+.t-issue.type{background:rgba(56,189,248,.14);color:#7DD3FC}
+.t-borrow.type{background:rgba(251,146,60,.16);color:#FDBA74}
+.type-note{display:flex;gap:8px;align-items:flex-start;margin:0;padding:11px 13px;border-radius:13px;font-size:13px;line-height:1.45}
+.type-note svg{flex-shrink:0;margin-top:1px}
+.type-note.t-issue{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);color:#BAE6FD}
+.type-note.t-borrow{background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.28);color:#FED7AA}
+.due{margin:0;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.due.late,.late-t{color:var(--red-t);font-weight:700}
+html[data-theme=light] .t-issue.type{background:rgba(14,116,144,.1);color:#0E7490}
+html[data-theme=light] .t-borrow.type{background:rgba(194,65,12,.1);color:#C2410C}
+html[data-theme=light] .type-note.t-issue{background:rgba(14,116,144,.07);border-color:rgba(14,116,144,.2);color:#0E5A70}
+html[data-theme=light] .type-note.t-borrow{background:rgba(194,65,12,.07);border-color:rgba(194,65,12,.22);color:#9A3412}
+.tabs.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tabs.four button{font-size:12px}
+.search,.tabs,.hero,.page-h{flex-shrink:0}
+.new-dot{width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);margin-left:-8px;align-self:flex-start}
+.ic-round.amber{background:rgba(245,165,36,.14);color:var(--amber-t)}
+.tabs button{padding:0 4px}
+
+/* ============ DESKTOP: full-screen app (phones & tablets unchanged) ============ */
+.nav .nav-brand,.nav .nav-me{display:none}
+@media (min-width:900px){
+  html,body{height:100%;overflow:hidden}
+  #app{max-width:none;width:100%;height:100dvh;min-height:0;margin:0;border:0;border-radius:0;box-shadow:none;background:transparent;
+       display:grid;grid-template-columns:248px minmax(0,1fr);grid-template-rows:minmax(0,1fr);overflow:hidden}
+  /* sidebar */
+  .nav{grid-column:1;grid-row:1;position:relative;bottom:auto;height:100%;flex-direction:column;justify-content:flex-start;gap:4px;
+       padding:22px 14px;border-top:0;border-right:1px solid var(--line);background:rgba(9,13,28,.55)}
+  .nav .nav-brand{display:flex;align-items:center;gap:12px;padding:4px 8px 22px}
+  .nav-logo{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-family:Outfit,sans-serif;font-weight:700;font-size:13px;color:#fff;
+            background:linear-gradient(150deg,#5B8CFF,#6A3CF0);box-shadow:0 10px 24px rgba(76,90,255,.35)}
+  .nav-brand b{display:block;font-family:Outfit,sans-serif;font-size:17px}
+  .nav-brand small{color:var(--muted);font-size:12px}
+  .nav>button[data-a=tab]{flex:0 0 auto;width:100%;height:48px;flex-direction:row;justify-content:flex-start;gap:12px;padding:0 14px;border-radius:12px;font-size:14px}
+  .nav>button[data-a=tab]:hover{background:rgba(255,255,255,.05);color:var(--text)}
+  .nav>button.on{background:rgba(76,125,255,.16)}
+  .nav>button.on::before{top:12px;left:0;width:3px;height:24px}
+  .nav .badge{position:static;margin-left:auto}
+  .nav .nav-me{display:flex;flex:0 0 auto;height:auto;flex-direction:row;justify-content:flex-start;align-items:center;gap:10px;margin-top:auto;padding:12px 10px;border-radius:14px;text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text);font-size:13px}
+  .nav .nav-me>span:last-child{min-width:0}
+  .nav-me b{display:block;font-size:13px}
+  .nav-me small{display:block;color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* page area: fills the screen, scrolls only inside if needed */
+  main.screen{grid-column:2;grid-row:1;height:100%;overflow-y:auto;padding:32px 40px 40px;gap:20px}
+  main.screen>*{width:100%;max-width:1240px;margin-left:auto;margin-right:auto}
+  .hero .avatar{display:none}
+  .chips{margin:0;padding:0}
+  .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
+  .list>.day,.list>.empty{grid-column:1/-1}
+  .cats{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+  .cat{height:150px}
+  .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tabs{max-width:560px}
+  .btn{max-width:420px}
+  .two .btn{max-width:none}
+  .search{max-width:560px}
+  /* material page: picture left, choices right */
+  main[data-screen=detail]{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:32px;align-content:start}
+  main[data-screen=detail]>*{max-width:none;margin:0}
+  main[data-screen=detail]>.top{grid-column:1/-1}
+  main[data-screen=detail]>.hero-img{grid-column:1;grid-row:2/span 5;height:auto;min-height:420px;align-self:stretch}
+  main[data-screen=detail]>:not(.top):not(.hero-img){grid-column:2}
+  /* forms stay a comfortable width */
+  main[data-screen=edit]>*,main[data-screen=add]>*,main[data-screen=catedit]>*,main[data-screen=profile]>*,main[data-screen=sent]>*{max-width:760px}
+  main[data-screen=cart]{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);column-gap:32px;align-content:start}
+  main[data-screen=cart]>*{max-width:none;margin:0;grid-column:1/-1}
+  main[data-screen=cart]>.list{grid-column:1;grid-row:2/span 6;grid-template-columns:1fr}
+  main[data-screen=cart]>:not(.page-h):not(.list){grid-column:2}
+  main[data-screen=cart] .btn{max-width:none}
+  /* sign-in page: brand left, form right */
+  .login{display:grid;grid-template-columns:minmax(0,1fr) 440px;column-gap:64px;align-content:center;max-width:1100px;margin:0 auto;height:100dvh;overflow-y:auto;padding:40px}
+  #app:has(.login){display:block}
+  .login>.logo{grid-column:1;width:96px;height:96px;font-size:26px;border-radius:30px}
+  .login>div:nth-child(2){grid-column:1}
+  .login>div:nth-child(2) .h1{font-size:52px!important}
+  .login>div:nth-child(2) .muted{font-size:18px}
+  .login>.tabs,.login>.signin-card,.login>.badge-preview{grid-column:2}
+  .login>.tabs{grid-row:1;align-self:end}
+  .login>.signin-card{grid-row:2/span 2}
+  /* pop-ups in the middle of the screen */
+  #modal{align-items:center}
+  .sheet{margin:0}
+  #toast{bottom:32px}
+}
+
+/* ================= LIGHT MODE (glassy white + light blue) ================= */
+html[data-theme=light]{
+  --bg:#EEF3FF; --text:#12203F; --muted:#56637F;
+  --glass:linear-gradient(180deg,rgba(255,255,255,.88),rgba(255,255,255,.58));
+  --line:rgba(60,90,170,.14); --line-hi:rgba(255,255,255,.95);
+  --field:rgba(255,255,255,.72);
+  --accent:#3F6BF0; --accent-t:#2B50D0;
+  --amber-t:#A86200; --red-t:#C22E2E; --green:#0E8A58;
+  background:linear-gradient(160deg,#F7FAFF 0%,#E7EFFF 55%,#EFEAFF 100%);
+}
+html[data-theme=light] #bg i{opacity:.55}
+html[data-theme=light] #bg i:nth-child(1){background:#9EC0FF}
+html[data-theme=light] #bg i:nth-child(2){background:#CDBBFF;opacity:.5}
+html[data-theme=light] #bg i:nth-child(3){background:#9FEBDD;opacity:.45}
+html[data-theme=light] .card{background:var(--glass);box-shadow:inset 0 1px 0 #fff,0 10px 30px rgba(40,70,160,.08)}
+html[data-theme=light] .icon-btn{background:rgba(255,255,255,.8);box-shadow:0 4px 14px rgba(40,70,160,.06)}
+html[data-theme=light] .icon-btn.primary{background:linear-gradient(180deg,#5B8CFF,#3A64E8)}
+html[data-theme=light] .avatar{background:rgba(63,107,240,.1);border-color:rgba(63,107,240,.25)}
+html[data-theme=light] .thumb{background:rgba(60,90,170,.07)}
+html[data-theme=light] .hero-img{background:rgba(255,255,255,.6)}
+html[data-theme=light] .stepper button{background:rgba(60,90,170,.08)}
+html[data-theme=light] .btn.ghost{background:rgba(255,255,255,.7)}
+html[data-theme=light] .btn.light{background:#fff;border:1px solid var(--line);box-shadow:0 8px 20px rgba(40,70,160,.1)}
+html[data-theme=light] .btn:disabled{opacity:.5}
+html[data-theme=light] .field select option{background:#fff;color:#12203F}
+html[data-theme=light] .file-btn{background:rgba(255,255,255,.92)}
+html[data-theme=light] .photo-box{background:rgba(63,107,240,.05)}
+html[data-theme=light] .req-items{background:rgba(60,90,170,.06)}
+html[data-theme=light] .stat{background:linear-gradient(160deg,rgba(76,125,255,.14),rgba(255,255,255,.55)),rgba(255,255,255,.6)}
+html[data-theme=light] .nav{background:rgba(255,255,255,.75)}
+html[data-theme=light] #modal{background:rgba(30,45,90,.22)}
+html[data-theme=light] .sheet{background:linear-gradient(180deg,#FFFFFF,#F2F6FF);border-color:#fff;box-shadow:0 30px 80px rgba(30,50,120,.25)}
+html[data-theme=light] #toast{background:#12203F;color:#fff}
+html[data-theme=light] #toast button{color:#A9C0FF}
+html[data-theme=light] .f-G{background:rgba(16,185,129,.14);color:#0B7A4E}
+html[data-theme=light] .f-F{background:rgba(124,92,255,.14);color:#5A3FC4}
+html[data-theme=light] .pill.amber{background:rgba(245,165,36,.16)}
+html[data-theme=light] .more-btn{background:rgba(63,107,240,.06)}
+html[data-theme=light] .nav-me{background:rgba(255,255,255,.7)!important}
+@media (min-width:600px) and (max-width:899px){ html[data-theme=light] #app{background:rgba(255,255,255,.35);box-shadow:0 40px 120px rgba(40,70,160,.18),inset 0 1px 0 #fff} }
+@media (min-width:900px){
+  html[data-theme=light] .nav{background:rgba(255,255,255,.62)}
+  html[data-theme=light] .nav>button[data-a=tab]:hover{background:rgba(60,90,170,.07)}
+  html[data-theme=light] .nav>button.on{background:rgba(63,107,240,.12)}
+}
+/* theme switch */
+.theme-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--field);border:1px solid var(--line)}
+.theme-seg button{height:40px;border-radius:10px;font-size:13px;font-weight:800;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.theme-seg button.on{background:var(--accent);color:#fff}
+.theme-fab{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:30;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+  background:var(--glass),var(--field);border:1px solid var(--line);color:var(--text)}
+</style>
+</head>
+<body>
+<div id="bg"><i></i><i></i><i></i></div>
+<div id="app"><div class="loading"><div class="spin"></div></div></div>
+<div id="modal" role="dialog" aria-modal="true"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+
+<script>
+/* =====================================================================
+   1) SCHOOL SETTINGS — the only part you ever need to change
+   ===================================================================== */
+const SCHOOL = {
+  siteName: 'AHIS RRIT',
+  fullName: 'Avalon Heights International School',
+  emailDomain: 'avalonheights.co.in',
+  // Teachers: firstname.lastname@avalonheights.co.in → Teacher side (primary users).
+  // Students cannot use this website.
+  // The ONLY admins — they can use BOTH the Admin side and the Teacher side:
+  admins: [
+    'kavita.patil@avalonheights.co.in',
+    'aditya1755@avalonheights.co.in'
+  ],
+  // Shared passwords (chosen by the school). Admin emails always use the admin password.
+  teacherPassword: '12345',
+  adminPassword: 'host123'
+};
+// Firebase needs 6+ characters, so this is added behind the scenes (people never type it)
+const PASS_SUFFIX = '#ahis-rrit';
+// Opened inside WhatsApp / Instagram / Outlook / Gmail etc. instead of Safari or Chrome
+const IN_APP = /FBAN|FBAV|Instagram|WhatsApp|Snapchat|LinkedInApp|Line\/|MicroMessenger|Outlook|GSA\/|; wv\)/i.test(navigator.userAgent);
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBTEyToY35K0cmEdWzRpZaEtooRaSB4NM8",
+  authDomain: "ahis-rrit-final.firebaseapp.com",
+  projectId: "ahis-rrit-final",
+  storageBucket: "ahis-rrit-final.firebasestorage.app",
+  messagingSenderId: "901654852750",
+  appId: "1:901654852750:web:f3187e588d54c7918485df"
+};
+
+const MAX_TAKE = 5;    // most pieces of one item a teacher can take without asking
+const LOW_STOCK = 5;   // below this number → "low stock, please restock" alert
+const FLOORS = { G: 'Ground Floor', F: 'First Floor' };
+
+/* =====================================================================
+   2) BUILT-IN CATEGORIES + MATERIALS (loaded the very first time anyone signs in)
+   floor: 'G' = Ground Floor, 'F' = First Floor.
+   Every item is either 'issue' (they keep it) or 'borrow' (they must return it),
+   on either floor. Admins can change all of this later.
+   ===================================================================== */
+const DEFAULT_CATS = [
+  { name: 'Stationery',        floor: 'G', grad: ['#14B89A', '#56D6F5'], icon: 'pencil' },
+  { name: 'Art Materials',     floor: 'G', grad: ['#FF6A5B', '#FFB547'], icon: 'palette' },
+  { name: 'Toys',              floor: 'F', grad: ['#E0457B', '#FF9A8B'], icon: 'toy' },
+  { name: 'Papers & Sheets',   floor: 'F', grad: ['#4F7BFF', '#9A6BFF'], icon: 'papers' },
+  { name: 'Glue & Tapes',      floor: 'F', grad: ['#10B981', '#A3E635'], icon: 'drop' },
+  { name: 'Craft & Party',     floor: 'F', grad: ['#F59E0B', '#FDE047'], icon: 'cup' },
+  { name: 'Halloween Masks',   floor: 'F', grad: ['#7C3AED', '#F97316'], icon: 'mask' },
+  { name: 'Props',             floor: 'F', grad: ['#9C6B3E', '#E0B77E'], icon: 'box' },
+  { name: 'Other',             floor: 'G', grad: ['#56607A', '#A5B4CF'], icon: 'more' }
+];
+const NEW_CAT_GRADS = [['#3AA0FF', '#6EE7F9'], ['#7C5CFF', '#C084FC'], ['#F59E0B', '#FDE047'], ['#10B981', '#A3E635'], ['#EF4444', '#FB923C']];
+const COLOURS = {
+  White: '#F4F4F6', Blue: '#4F8CFF', Red: '#EF4444', Yellow: '#FACC15', Green: '#22C55E',
+  Purple: '#8B5CF6', Pink: '#F472B6', Orange: '#FB923C', Brown: '#B07A45', Black: '#2B3445',
+  Gold: '#E5B53B', Silver: '#C9CED8', Assorted: '#94A3B8'
+};
+// [name, category, description, 'issue' | 'borrow', [[colour, size, stock], ...]]
+const SEED = [
+  // Ground Floor
+  ['Sketch Pens', 'Stationery', 'Packs of 12', 'borrow', [['Assorted','Pack',10]]],
+  ['Colour Pencils', 'Stationery', 'Boxes of 24', 'borrow', [['Assorted','Box',12]]],
+  ['Markers', 'Stationery', 'Permanent / Whiteboard', 'issue', [['Black','Permanent',15],['Blue','Whiteboard',12],['Red','Whiteboard',10]]],
+  ['Crayons', 'Stationery', 'Boxes of 12', 'issue', [['Assorted','Box',14]]],
+  ['Scissors', 'Stationery', 'Kids / Regular', 'borrow', [['Red','Kids',9],['Black','Regular',5]]],
+  ['Rulers', 'Stationery', '30 cm', 'borrow', [['White','30 cm',20]]],
+  ['Poster Colours', 'Art Materials', 'Small jars', 'issue', [['Red','Small jar',6],['Blue','Small jar',7],['Yellow','Small jar',5],['Black','Small jar',9],['White','Small jar',11]]],
+  ['Oil Pastels', 'Art Materials', 'Boxes of shades', 'issue', [['Assorted','12 shades',10],['Assorted','25 shades',4]]],
+  ['Paint Brushes', 'Art Materials', 'Small to large', 'borrow', [['Brown','Small',20],['Brown','Medium',16],['Brown','Large',8]]],
+  ['Building Blocks', 'Toys', 'Classroom sets', 'borrow', [['Assorted','Set',6]]],
+  ['Soft Toys', 'Toys', 'Puppets & animals', 'borrow', [['Assorted','Medium',8]]],
+  ['Jigsaw Puzzles', 'Toys', 'Picture puzzles', 'borrow', [['Assorted','50 pieces',5],['Assorted','100 pieces',4]]],
+  // First Floor
+  ['Chart Paper', 'Papers & Sheets', 'Various colours', 'issue', [['White','Standard',24],['Blue','Standard',4],['Red','Standard',12],['Yellow','Standard',9],['Green','Standard',15],['Purple','Standard',6]]],
+  ['A4 Sheets', 'Papers & Sheets', 'White / Coloured', 'issue', [['White','A4',120],['Assorted','A4',56]]],
+  ['Cardboard', 'Papers & Sheets', 'Brown / White', 'issue', [['Brown','Thin',14],['Brown','Thick',8],['White','Thin',6]]],
+  ['Glitter Paper', 'Papers & Sheets', 'Gold / Silver / Red', 'issue', [['Gold','A4',8],['Silver','A4',5],['Red','A4',3]]],
+  ['Fevicol', 'Glue & Tapes', 'Glue bottles', 'issue', [['White','100 g',12],['White','250 g',4]]],
+  ['Glue Sticks', 'Glue & Tapes', 'Solid glue', 'issue', [['White','Medium',20]]],
+  ['Cello Tape', 'Glue & Tapes', 'Rolls', 'issue', [['Silver','1 inch',8],['Silver','2 inch',6]]],
+  ['Double-sided Tape', 'Glue & Tapes', 'Rolls', 'issue', [['White','1 inch',6]]],
+  ['Paper Cups', 'Craft & Party', 'Packs of 25', 'issue', [['White','Small',10],['Assorted','Medium',6]]],
+  ['Ice-cream Sticks', 'Craft & Party', 'Packs of 50', 'issue', [['Assorted','Pack',12]]],
+  ['Thermocol Sheet', 'Craft & Party', '2 × 3 ft sheets', 'issue', [['White','10 mm',3],['White','20 mm',5]]],
+  ['Foam Sheet', 'Craft & Party', 'Coloured foam', 'issue', [['Pink','A4',8],['Blue','A4',7],['Green','A4',5]]],
+  ['Balloons', 'Craft & Party', 'Packs of 50', 'issue', [['Assorted','Pack',8]]],
+  ['Skull Mask', 'Halloween Masks', 'Halloween', 'borrow', [['White','Adult',6],['White','Kids',6]]],
+  ['Witch Mask', 'Halloween Masks', 'Halloween', 'borrow', [['Green','Kids',5]]],
+  ['Pumpkin Mask', 'Halloween Masks', 'Halloween', 'borrow', [['Orange','Kids',8]]],
+  ['Vampire Mask', 'Halloween Masks', 'Halloween', 'borrow', [['Black','Adult',4]]],
+  ['Toy Knife', 'Props', 'Plastic, for drama', 'borrow', [['Silver','Small',6]]],
+  ['Gada', 'Props', 'Hanuman gada (mace)', 'borrow', [['Gold','Large',3],['Gold','Small',4]]],
+  ['Human Skeleton Model', 'Props', 'Science model', 'borrow', [['White','Half size',2]]],
+  ['Toy Sword', 'Props', 'Plastic', 'borrow', [['Silver','Medium',6]]],
+  ['Crown', 'Props', 'King / Queen', 'borrow', [['Gold','Adult',4],['Gold','Kids',6]]],
+  ['Magic Wand', 'Props', 'Fairy wand', 'borrow', [['Pink','Small',6]]],
+  ['Bow & Arrow', 'Props', 'Plastic set', 'borrow', [['Brown','Kids',4]]],
+  ['Globe', 'Props', 'Desk globe', 'borrow', [['Blue','Medium',4]]],
+  ['Costume Set', 'Props', 'Drama & assembly', 'borrow', [['Assorted','Kids',6]]]
+];
+
+/* =====================================================================
+   3) HELPERS
+   ===================================================================== */
+const LIVE = !!FIREBASE_CONFIG;   // set FIREBASE_CONFIG to null to test on one device without Firebase
+// Firebase is only downloaded when the site is live, so the preview opens instantly
+const loadScript = src => new Promise((ok, fail) => { const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = fail; document.head.appendChild(t); });
+const $app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-5);
+const hex = c => COLOURS[c] || '#94A3B8';
+const catOf = name => Store.categories.find(c => c.name === name) || { name, grad: ['#56607A', '#A5B4CF'], icon: 'more', photo: '' };
+// Picture for a category: its photo, or a colour tile with an icon
+const catArt = (c, size = 20) => c.photo ? `<img src="${c.photo}" alt="" style="width:100%;height:100%;object-fit:cover">` : `<span style="width:100%;height:100%;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,${c.grad[0]},${c.grad[1]})">${icon(c.icon || 'more', size)}</span>`;
+const initials = n => String(n || '?').trim().split(/[\s._-]+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+const clock = ts => ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+const nameFromEmail = e => e.split('@')[0].replace(/[._-]+/g, ' ').replace(/\d+/g, '').trim().replace(/\b\w/g, c => c.toUpperCase()) || e;
+
+// Safe storage: works even inside previews where browser storage is blocked
+const mem = {};
+const keep = {
+  get(k) { let v = null; try { v = localStorage.getItem(k); } catch (e) {} return v ?? mem[k] ?? null; },
+  set(k, v) { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} }
+};
+const keepJSON = (k, d) => { try { return JSON.parse(keep.get(k)) ?? d; } catch (e) { return d; } };
+
+function dayLabel(ts) {
+  const d = new Date(ts), t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
+  if (d.toDateString() === t.toDateString()) return 'Today';
+  if (d.toDateString() === y.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function timeAgo(ts) {
+  if (!ts) return '';
+  const s = (Date.now() - ts) / 1000;
+  if (s < 60) return 'Just now';
+  if (s < 3600) return Math.floor(s / 60) + ' min ago';
+  if (dayLabel(ts) === 'Today') return clock(ts);
+  return dayLabel(ts) + ', ' + clock(ts);
+}
+function compressImage(file, max = 560) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const s = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = reject; img.src = reader.result;
+    };
+    reader.onerror = reject; reader.readAsDataURL(file);
+  });
+}
+
+const ICONS = {
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.2-6 8-6s7 2 8 6"/>',
+  shield: '<path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  chev: '<path d="M9 5l7 7-7 7"/>',
+  heart: '<path d="M12 20s-7.5-4.6-9.2-9.3C1.7 7.5 3.8 4.5 7 4.5c2 0 3.3 1 5 3 1.7-2 3-3 5-3 3.2 0 5.3 3 4.2 6.2C19.5 15.4 12 20 12 20z"/>',
+  heartF: '<path fill="currentColor" d="M12 20s-7.5-4.6-9.2-9.3C1.7 7.5 3.8 4.5 7 4.5c2 0 3.3 1 5 3 1.7-2 3-3 5-3 3.2 0 5.3 3 4.2 6.2C19.5 15.4 12 20 12 20z"/>',
+  cart: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M3 4h2l2.4 11h11.2L21 8H6.2"/>',
+  clip: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>',
+  home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  inbox: '<path d="M3 13l3-8h12l3 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h5l1 2h6l1-2h5"/>',
+  grid: '<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  alert: '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  send: '<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/>',
+  download: '<path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>',
+  note: '<path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/>',
+  logout: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
+  papers: '<path d="M7 3h9l4 4v12H7z"/><path d="M16 3v4h4M4 7v14h12"/>',
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-1.8 0-1.3-1-1.5-1-2.7 0-1 .8-1.5 1.8-1.5H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7" r="1.2"/>',
+  box: '<path d="M3 7l9-4 9 4-9 4z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/>',
+  pencil: '<path d="M4 20l1-5L16 4l4 4L9 19z"/><path d="M14 6l4 4"/>',
+  mask: '<path d="M4 6c3-1.5 13-1.5 16 0 0 7-3 13-8 13S4 13 4 6z"/><path d="M8 10.5c.8-.7 2-.7 2.8 0M13.2 10.5c.8-.7 2-.7 2.8 0M10 15c1.2.8 2.8.8 4 0"/>',
+  cup: '<path d="M5 5h14l-2 15H7z"/><path d="M5.5 9h13"/>',
+  drop: '<path d="M12 3c3.5 4.5 6 7.8 6 11a6 6 0 0 1-12 0c0-3.2 2.5-6.5 6-11z"/>',
+  toy: '<circle cx="12" cy="13" r="7"/><circle cx="7" cy="6" r="2.5"/><circle cx="17" cy="6" r="2.5"/><circle cx="9.5" cy="12" r=".8"/><circle cx="14.5" cy="12" r=".8"/><path d="M10 16c1.2.8 2.8.8 4 0"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 19a2 2 0 0 0 4 0"/>',
+  undo: '<path d="M9 5L4 10l5 5"/><path d="M4 10h10a5 5 0 0 1 0 10h-3"/>',
+  building: '<path d="M4 21V6l8-3 8 3v15"/><path d="M9 21v-5h6v5M8 9h1M15 9h1M8 13h1M15 13h1"/>',
+  more: '<circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/>'
+};
+const icon = (n, s = 22) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+const msLogo = '<span class="ms" aria-hidden="true"><i style="background:#F25022"></i><i style="background:#7FBA00"></i><i style="background:#00A4EF"></i><i style="background:#FFB900"></i></span>';
+const gLogo = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+
+function art(m) {
+  if (m.photo) return `<img src="${m.photo}" alt="">`;
+  const c = catOf(m.category);
+  const cols = [...new Set((m.variants || []).map(v => hex(v.colour)))];
+  const a = cols[0] || '#E9EDF6', b = cols[1] || a, d = cols[2] || b;
+  return `<span class="art" style="--g1:${c.grad[0]}40;--g2:${c.grad[1]}40"><i style="background:${d}"></i><i style="background:${b}"></i><i style="background:${a}"></i></span>`;
+}
+
+
+/* ---- stock by floor ---- */
+// One store per category now (old "Both floors" categories count as Ground Floor)
+const floorsOfCat = name => [catOf(name).floor === 'F' ? 'F' : 'G'];
+const floorsOf = m => floorsOfCat(m.category);
+const st = (v, fl) => (v && v.stock && typeof v.stock === 'object') ? (Number(v.stock[fl]) || 0) : 0;
+const vTotal = (v, m) => (m ? floorsOf(m) : ['G', 'F']).reduce((a, fl) => a + st(v, fl), 0);
+const total = m => (m.variants || []).reduce((a, v) => a + vTotal(v, m), 0);
+const floorTag = fl => `<span class="floor f-${fl}">${fl === 'G' ? 'Ground' : 'First'}</span>`;
+const catFloorText = f => f === 'F' ? 'First Floor' : 'Ground Floor';
+// Issue = yours to keep (not returnable). Borrow = must be returned by a date.
+const floorDefaultType = fl => fl === 'F' ? 'borrow' : 'issue';
+const matType = m => m && (m.type === 'borrow' || m.type === 'issue') ? m.type : floorDefaultType(m ? floorsOf(m)[0] : 'G');
+const recType = r => r.type === 'borrow' || r.type === 'issue' ? r.type : floorDefaultType(r.floor);
+const typeTag = t => `<span class="type t-${t}">${t === 'borrow' ? 'Borrow · return' : 'Issue · keep'}</span>`;
+const dueText = ts => new Date(ts).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+const endOfDay = ymd => { const d = new Date(ymd + 'T23:59:59'); return isNaN(d) ? 0 : d.getTime(); };
+const ymdIn = days => { const d = new Date(Date.now() + days * 864e5); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function lowList() {
+  return Store.materials.flatMap(m => floorsOf(m).flatMap(fl =>
+    m.variants.filter(v => st(v, fl) < LOW_STOCK).map(v => ({ m, v, fl, key: m.id + v.id + fl }))));
+}
+
+/* =====================================================================
+   4) WHO IS ALLOWED IN
+   Teachers: firstname.lastname@avalonheights.co.in → Teacher side
+   Admins:   only the emails in SCHOOL.admins → Admin side + Teacher side
+   Students (name + numbers) and every other email → blocked
+   ===================================================================== */
+const domainOf = e => (e.split('@')[1] || '').toLowerCase();
+const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const TEACHER_RX = /^[a-z]+(-[a-z]+)*\.[a-z]+(-[a-z]+)*$/;
+function roleFor(email) {
+  email = String(email || '').trim().toLowerCase();
+  if (!validEmail(email)) return { allowed: false, canAdmin: false, canTeacher: false };
+  const isAdmin = SCHOOL.admins.map(x => x.toLowerCase()).includes(email);
+  const isTeacher = domainOf(email) === SCHOOL.emailDomain.toLowerCase() && TEACHER_RX.test(email.split('@')[0]);
+  return { allowed: isAdmin || isTeacher, canAdmin: isAdmin, canTeacher: isAdmin || isTeacher };
+}
+let DB_PROBLEM = '';
+function dbError(err) {
+  const c = err && err.code;
+  DB_PROBLEM = c === 'permission-denied' ? 'The database is blocking the website. In Firebase (ahis-rrit-final) → Firestore → Rules, paste the latest rules and click Publish, then refresh this page.'
+    : (c === 'not-found' || /does not exist/i.test(err && err.message || '')) ? 'There is no database yet. In Firebase → Firestore Database → Create database, then refresh.'
+    : 'Database error: ' + (err && err.message || err);
+  setTimeout(() => { try { render(); } catch (e) {} }, 0);
+  if (c === 'permission-denied') return toast('Database blocked: publish the new rules (Firebase → Firestore → Rules → Publish).');
+  if (c === 'not-found' || /does not exist/i.test(err && err.message || '')) return toast('No database yet: create it (Firebase → Firestore Database → Create database).');
+  toast('Database error: ' + (err && err.message || err));
+}
+async function hash(text) {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) { let h = 0; for (const ch of text) h = (h * 31 + ch.charCodeAt(0)) | 0; return 'x' + h; }
+}
+function friendly(e) {
+  const c = e && e.code || '';
+  if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-login-credentials'].includes(c))
+    return 'Wrong password.';
+  if (c === 'auth/invalid-email') return 'That email address is not valid.';
+  if (c === 'auth/operation-not-allowed') return 'Email/Password sign-in is switched off in Firebase (Authentication → Sign-in method → Email/Password → Enable).';
+  if (c === 'auth/invalid-api-key' || c === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.') return 'The Firebase settings in the website are wrong (API key).';
+  if (c === 'auth/too-many-requests') return 'Too many wrong tries. Wait a few minutes and try again.';
+  if (c === 'auth/email-already-in-use') return 'An account with this email already exists. Sign in instead.';
+  if (c === 'auth/weak-password') return 'Password must be at least 6 characters.';
+  if (c === 'auth/network-request-failed') return 'No internet connection. Check it and try again.';
+  return (e && e.message) || 'Something went wrong. Try again.';
+}
+
+let fb = null;
+const Auth = {
+  user: null,   // { email, name, dept, role: 'teacher' | 'admin', canAdmin, canSwitch }
+  onChange: () => {},
+  build(email, side) {
+    const r = roleFor(email), prof = keepJSON('rrit_profile_' + email, {});
+    const role = (side === 'admin' && r.canAdmin) || !r.canTeacher ? 'admin' : 'teacher';
+    return { email, canAdmin: r.canAdmin, canSwitch: r.canAdmin && r.canTeacher, role, name: prof.name || nameFromEmail(email), dept: prof.dept || '' };
+  },
+  check(email, side) {
+    const r = roleFor(email);
+    if (!validEmail(email)) return 'Type your full school email.';
+    if (domainOf(email) !== SCHOOL.emailDomain && !r.allowed) return `Only @${SCHOOL.emailDomain} school emails can use this website.`;
+    if (!r.allowed) return 'Only teachers can use this website (firstname.lastname@' + SCHOOL.emailDomain + '). Student emails are not allowed.';
+    if (side === 'admin' && !r.canAdmin) return 'Only the resource room admins can use the Admin side. Choose "Teacher" instead.';
+    return '';
+  },
+  async init(onChange) {
+    this.onChange = onChange;
+    if (!LIVE) {
+      const saved = keepJSON('rrit_session', null);
+      if (saved && roleFor(saved.email).allowed) this.user = this.build(saved.email, saved.side);
+      onChange(); return;
+    }
+    try {
+      const base = 'https://www.gstatic.com/firebasejs/10.12.2/';
+      await loadScript(base + 'firebase-app-compat.js');
+      await Promise.all([loadScript(base + 'firebase-auth-compat.js'), loadScript(base + 'firebase-firestore-compat.js')]);
+    } catch (e) { $app.innerHTML = '<div class="loading"><p class="muted" style="text-align:center;padding:20px">Could not connect. Check your internet and reload.</p></div>'; return; }
+    fb = firebase.initializeApp(FIREBASE_CONFIG);
+    try {
+      firebase.firestore().settings(IN_APP ? { experimentalForceLongPolling: true, merge: true } : { experimentalAutoDetectLongPolling: true, merge: true });
+      // keeps a copy on the device, so the next time the app opens instantly
+      firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(() => {});
+    } catch (e) {}
+    try {
+      firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+        .catch(() => firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION))
+        .catch(() => {});
+    } catch (e) {}
+    firebase.auth().onAuthStateChanged(u => {
+      if (!u) { this.user = null; onChange(); return; }
+      const email = u.email.toLowerCase();
+      if (!roleFor(email).allowed) { firebase.auth().signOut(); return; }
+      this.user = this.build(email, keep.get('rrit_side_' + email));
+      onChange();
+    });
+  },
+  // One sign-in for everyone: check the shared password, then Firebase.
+  // First time for an email: the account is created and a verification link is emailed.
+  async signIn(email, pass, side) {
+    email = email.trim().toLowerCase();
+    const bad = this.check(email, side); if (bad) throw new Error(bad);
+    if (!pass) throw new Error('Type your password.');
+    const r = roleFor(email);
+    if (pass !== (r.canAdmin ? SCHOOL.adminPassword : SCHOOL.teacherPassword)) throw new Error('Wrong password.');
+    keep.set('rrit_side_' + email, side);
+    if (!LIVE) {
+      keep.set('rrit_session', JSON.stringify({ email, side }));
+      this.user = this.build(email, side); this.onChange(); return '';
+    }
+    const real = pass + PASS_SUFFIX;
+    let cred;
+    try { cred = await firebase.auth().signInWithEmailAndPassword(email, real); }
+    catch (e) {
+      if (!['auth/invalid-credential', 'auth/user-not-found', 'auth/invalid-login-credentials', 'auth/wrong-password'].includes(e.code)) throw new Error(friendly(e));
+      // No account yet → create it now
+      try { cred = await firebase.auth().createUserWithEmailAndPassword(email, real); }
+      catch (e2) {
+        if (e2.code === 'auth/email-already-in-use') throw new Error('This email was set up earlier with a different password. An admin must delete it in Firebase → Authentication → Users, then sign in again.');
+        throw new Error(friendly(e2));
+      }
+    }
+    return '';
+  },
+  switchSide() {
+    const side = this.user.role === 'admin' ? 'teacher' : 'admin';
+    keep.set('rrit_side_' + this.user.email, side);
+    if (!LIVE) keep.set('rrit_session', JSON.stringify({ email: this.user.email, side }));
+    this.user = this.build(this.user.email, side);
+  },
+  saveProfile(name, dept) {
+    keep.set('rrit_profile_' + this.user.email, JSON.stringify({ name, dept }));
+    this.user.name = name; this.user.dept = dept;
+  },
+  async signOut() {
+    Store.stop();
+    if (LIVE) await firebase.auth().signOut(); else keep.del('rrit_session');
+    this.user = null;
+  }
+};
+
+/* =====================================================================
+   5) DATABASE
+   ===================================================================== */
+const Store = (() => {
+  const subs = [];
+  let materials = [], requests = [], returns = [], categories = [], unsubs = [], ready = false, db = null;
+  const emit = () => subs.forEach(f => f());
+  const byName = (a, b) => a.name.localeCompare(b.name);
+  const byOrder = (a, b) => (a.order ?? 99) - (b.order ?? 99) || a.name.localeCompare(b.name);
+  const newest = (a, b) => b.createdAt - a.createdAt;
+  const seedCats = () => DEFAULT_CATS.map((c, i) => ({ ...c, photo: '', order: i }));
+  const seedId = (pre, name) => 'seed-' + pre + '-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const seedDocs = () => SEED.map(s => {
+    const f = (DEFAULT_CATS.find(c => c.name === s[1]) || {}).floor === 'F' ? 'F' : 'G';
+    return { name: s[0], category: s[1], desc: s[2], type: s[3], photo: '', createdAt: Date.now(),
+      variants: s[4].map(v => ({ id: uid(), colour: v[0], size: v[1], stock: { [f]: v[2] } })) };
+  });
+
+  const saveLocal = () => ['materials', 'requests', 'returns', 'categories'].forEach(k => keep.set('rrit3_' + k, JSON.stringify({ materials, requests, returns, categories }[k])));
+  const loadLocal = () => {
+    categories = keepJSON('rrit3_categories', null) || seedCats().map(c => ({ id: uid(), ...c }));
+    materials = keepJSON('rrit3_materials', null) || seedDocs().map(d => ({ id: uid(), ...d }));
+    requests = keepJSON('rrit3_requests', []); returns = keepJSON('rrit3_returns', []);
+    categories.sort(byOrder); materials.sort(byName); requests.sort(newest); returns.sort(newest);
+    saveLocal();
+  };
+
+  // Changes one floor's stock for a list of items; stops if there isn't enough
+  function changeStock(getVariants, items, floor, sign) {
+    const out = {};
+    for (const it of items) {
+      if (!out[it.materialId]) {
+        const vs = getVariants(it.materialId);
+        if (!vs) throw new Error(`${it.name} was deleted from inventory`);
+        out[it.materialId] = vs.map(v => ({ ...v, stock: { ...(v.stock || {}) } }));
+      }
+      const v = out[it.materialId].find(x => x.id === it.variantId);
+      if (!v) throw new Error(`${it.name} (${it.colour}, ${it.size}) no longer exists`);
+      const now = st(v, floor) + sign * it.qty;
+      if (now < 0) throw new Error(`Only ${st(v, floor)} left of ${it.name} (${it.colour}) on the ${FLOORS[floor]}`);
+      v.stock[floor] = now;
+    }
+    return out;
+  }
+  // Runs a stock change + record update together (all-or-nothing when live)
+  async function stockTxn(col, id, check, build) {
+    if (LIVE) {
+      await db.runTransaction(async t => {
+        const ref = db.collection(col).doc(id);
+        const doc = (await t.get(ref)).data();
+        check(doc);
+        const { items, floor, sign, patch } = build(doc);
+        let out = {};
+        if (items.length) {
+          const snaps = {};
+          for (const mid of [...new Set(items.map(i => i.materialId))]) {
+            const sn = await t.get(db.collection('materials').doc(mid));
+            snaps[mid] = sn.exists ? sn.data().variants : null;
+          }
+          out = changeStock(mid => snaps[mid], items, floor, sign);
+        }
+        for (const mid in out) t.update(db.collection('materials').doc(mid), { variants: out[mid] });
+        t.update(ref, patch);
+      });
+      return;
+    }
+    const list = col === 'requests' ? requests : returns;
+    const doc = list.find(x => x.id === id);
+    check(doc);
+    const { items, floor, sign, patch } = build(doc);
+    if (items.length) {
+      const out = changeStock(mid => materials.find(m => m.id === mid)?.variants, items, floor, sign);
+      materials = materials.map(m => out[m.id] ? { ...m, variants: out[m.id] } : m);
+    }
+    if (col === 'requests') requests = requests.map(x => x.id === id ? { ...x, ...patch } : x);
+    else returns = returns.map(x => x.id === id ? { ...x, ...patch } : x);
+    saveLocal(); emit();
+  }
+  const add = async (col, d) => {
+    if (LIVE) return db.collection(col).add(d);
+    const doc = { id: uid(), ...d };
+    if (col === 'requests') requests = [doc, ...requests];
+    if (col === 'returns') returns = [doc, ...returns];
+    if (col === 'materials') materials = [...materials, doc].sort(byName);
+    if (col === 'categories') categories = [...categories, doc].sort(byOrder);
+    saveLocal(); emit();
+  };
+
+  return {
+    get materials() { return materials; },
+    get requests() { return requests; },
+    get returns() { return returns; },
+    get categories() { return categories; },
+    get ready() { return ready; },
+    sub: f => subs.push(f),
+
+    start() {
+      this.stop();
+      if (!LIVE) {
+        loadLocal(); ready = true;
+        addEventListener('storage', this._onStorage = e => { if (e.key && e.key.startsWith('rrit3_')) { loadLocal(); emit(); } });
+        emit(); return;
+      }
+      db = firebase.firestore();
+      const admin = Auth.user.canAdmin, me = Auth.user.email;
+      const got = {}; const need = ['categories', 'materials', 'requests', 'returns'];
+      const done = k => { got[k] = true; if (need.every(x => got[x])) { ready = true; } emit(); };
+      let seededC = false, seededM = false;
+      unsubs.push(db.collection('categories').onSnapshot(snap => {
+        if (snap.empty && !(snap.metadata && snap.metadata.fromCache) && !seededC) { seededC = true; const b = db.batch(); seedCats().forEach(c => b.set(db.collection('categories').doc(seedId('cat', c.name)), c)); b.commit().catch(dbError); }
+        categories = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byOrder); done('categories');
+      }, err => dbError(err)));
+      unsubs.push(db.collection('materials').onSnapshot(snap => {
+        if (snap.empty && !(snap.metadata && snap.metadata.fromCache) && !seededM) { seededM = true; const b = db.batch(); seedDocs().forEach(d => b.set(db.collection('materials').doc(seedId('mat', d.name)), d)); b.commit().catch(dbError); }
+        materials = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byName); done('materials');
+      }, err => dbError(err)));
+      for (const col of ['requests', 'returns']) {
+        let q = db.collection(col);
+        if (!admin) q = q.where('userEmail', '==', me);   // teachers only ever load their own
+        unsubs.push(q.onSnapshot(snap => {
+          const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(newest);
+          if (col === 'requests') requests = list; else returns = list;
+          done(col);
+        }, err => dbError(err)));
+      }
+    },
+    stop() {
+      unsubs.forEach(u => u()); unsubs = []; ready = false;
+      if (this._onStorage) { removeEventListener('storage', this._onStorage); this._onStorage = null; }
+    },
+
+    async addCategory(c) { return add('categories', { ...c, order: categories.length }); },
+    async updateCategory(id, patch) {
+      const old = categories.find(c => c.id === id);
+      const moving = old && patch.name && patch.name !== old.name ? materials.filter(m => m.category === old.name) : [];
+      if (LIVE) {
+        await db.collection('categories').doc(id).update(patch);
+        for (const m of moving) await db.collection('materials').doc(m.id).update({ category: patch.name });
+        return;
+      }
+      categories = categories.map(c => c.id === id ? { ...c, ...patch } : c).sort(byOrder);
+      materials = materials.map(m => moving.includes(m) ? { ...m, category: patch.name } : m);
+      saveLocal(); emit();
+    },
+    async deleteCategory(id) {
+      if (LIVE) return db.collection('categories').doc(id).delete();
+      categories = categories.filter(c => c.id !== id); saveLocal(); emit();
+    },
+    async addMaterial(d) { return add('materials', { ...d, createdAt: Date.now() }); },
+    async updateMaterial(id, patch) {
+      if (LIVE) return db.collection('materials').doc(id).update(patch);
+      materials = materials.map(m => m.id === id ? { ...m, ...patch } : m).sort(byName); saveLocal(); emit();
+    },
+    async deleteMaterial(id) {
+      if (LIVE) return db.collection('materials').doc(id).delete();
+      materials = materials.filter(m => m.id !== id); saveLocal(); emit();
+    },
+    // Teacher sends a request (one per floor store)
+    // Teacher asks for more than the limit: waits for an admin to approve or deny
+    async sendRequest(r) { return add('requests', { ...r, status: 'Pending', createdAt: Date.now() }); },
+    // Teacher takes items directly: stock goes down now, admin is only notified
+    async take(r) {
+      const now = Date.now();
+      r = { ...r, status: 'Borrowed', createdAt: now, decidedAt: now };
+      if (LIVE) {
+        await db.runTransaction(async t => {
+          const snaps = {};
+          for (const mid of [...new Set(r.items.map(i => i.materialId))]) {
+            const sn = await t.get(db.collection('materials').doc(mid));
+            snaps[mid] = sn.exists ? sn.data().variants : null;
+          }
+          const out = changeStock(mid => snaps[mid], r.items, r.floor, -1);
+          for (const mid in out) t.update(db.collection('materials').doc(mid), { variants: out[mid] });
+          t.set(db.collection('requests').doc(), r);
+        });
+        return;
+      }
+      const out = changeStock(mid => materials.find(m => m.id === mid)?.variants, r.items, r.floor, -1);
+      materials = materials.map(m => out[m.id] ? { ...m, variants: out[m.id] } : m);
+      requests = [{ id: uid(), ...r }, ...requests]; saveLocal(); emit();
+    },
+    // Admin approves (stock goes down on that floor) or rejects
+    async decide(id, approve, by) {
+      return stockTxn('requests', id,
+        doc => { if (!doc || doc.status !== 'Pending') throw new Error('This request was already handled'); },
+        doc => ({ items: approve ? doc.items : [], floor: doc.floor, sign: -1,
+          patch: { status: approve ? 'Borrowed' : 'Denied', decidedAt: Date.now(), decidedBy: by } }));
+    },
+    // Teacher returns an item or reports damage
+    async sendReturn(r) { return add('returns', { ...r, status: 'Pending', createdAt: Date.now() }); },
+    // Admin checks the return: good items go back into stock, damaged/broken don't
+    async confirmReturn(id, by) {
+      return stockTxn('returns', id,
+        doc => { if (!doc || doc.status !== 'Pending') throw new Error('This return was already checked'); },
+        doc => ({ items: doc.condition === 'Good' ? [doc] : [], floor: doc.floor, sign: 1,
+          patch: { status: 'Checked', decidedAt: Date.now(), decidedBy: by } }));
+    }
+  };
+})();
+
+// Light / dark mode (saved on this device)
+function applyTheme(t) {
+  t = t === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+  keep.set('rrit_theme', t);
+  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = t === 'light' ? '#EEF3FF' : '#070A16';
+}
+applyTheme(keep.get('rrit_theme') || 'dark');
+const themeSeg = () => { const t = document.documentElement.dataset.theme; return `<div class="opt"><div class="opt-h"><span>Appearance</span></div><div class="theme-seg">
+  <button class="${t === 'dark' ? 'on' : ''}" data-a="theme" data-v="dark">${icon('moon', 16)} Dark</button>
+  <button class="${t === 'light' ? 'on' : ''}" data-a="theme" data-v="light">${icon('sun', 16)} Light</button></div></div>`; };
+
+/* =====================================================================
+   6) APP STATE + NAVIGATION
+   ===================================================================== */
+const S = {
+  screen: '', params: {}, stack: [], dir: 'fade',
+  cart: [], favs: [], q: '', purpose: '', note: '', sel: null, draft: null, ret: null,
+  tab: 'Pending', myTab: 'Borrowed', homeFloor: keep.get('rrit_homefloor') || 'All', due: '', actFilter: 'All', retTab: 'Pending', invCat: 'All', listSub: 'All', floor: keep.get('rrit_floor') || 'All',
+  side: 'teacher', authMode: 'signin', authMsg: null, f: { email: '', pass: '', pass2: '' }, busy: false, lastSent: [], bump: false
+};
+const me = () => Auth.user;
+const isAdmin = () => Auth.user?.role === 'admin';
+const saveCart = () => keep.set('rrit_cart_' + me().email, JSON.stringify(S.cart));
+const matById = id => Store.materials.find(m => m.id === id);
+const cartQty = (vid, fl) => S.cart.filter(l => l.variantId === vid && l.floor === fl).reduce((a, l) => a + l.qty, 0);
+const inFloor = fl => S.floor === 'All' || fl === S.floor;
+const outstanding = r => r.items.reduce((a, it) => a + Math.max(0, it.qty - returnedQty(r.id, it.variantId)), 0);
+const isOverdue = r => r.status === 'Borrowed' && recType(r) === 'borrow' && r.dueAt && Date.now() > r.dueAt && outstanding(r) > 0;
+const overdueList = () => Store.requests.filter(isOverdue);
+const recLabel = r => r.status === 'Pending' ? 'Waiting for admin' : r.status === 'Denied' ? 'Denied'
+  : isOverdue(r) ? 'Overdue' : recType(r) === 'borrow' ? (outstanding(r) === 0 ? 'Returned' : r.kind === 'extra' ? 'Borrowing accepted' : 'Borrowed')
+  : (r.kind === 'extra' ? 'Issuing accepted' : 'Issued');
+const recPill = r => { const l = recLabel(r); return `<span class="pill ${l === 'Overdue' || l === 'Denied' ? 'red' : l === 'Waiting for admin' ? 'amber' : 'green'}">${l}</span>`; };
+const returnedQty = (reqId, vid) => Store.returns.filter(x => x.requestId === reqId && x.variantId === vid).reduce((a, x) => a + x.qty, 0);
+
+function go(screen, params = {}) {
+  S.stack.push({ screen: S.screen, params: S.params });
+  S.screen = screen; S.params = params; S.dir = 'fwd';
+  onEnter(); render(); window.scrollTo(0, 0);
+}
+function back() {
+  const p = S.stack.pop(); if (!p) return;
+  S.screen = p.screen; S.params = p.params; S.dir = 'back';
+  render(); window.scrollTo(0, 0);
+}
+function tab(screen) {
+  S.stack = []; S.screen = screen; S.params = {}; S.dir = 'fade';
+  onEnter(); render(); window.scrollTo(0, 0);
+}
+function pickDefault(m) {
+  for (const v of m.variants) for (const fl of floorsOf(m)) if (st(v, fl) > 0) return { colour: v.colour, size: v.size, floor: fl, qty: 1 };
+  const v = m.variants[0] || {}; return { colour: v.colour || '', size: v.size || '', floor: floorsOf(m)[0], qty: 1 };
+}
+function onEnter() {
+  if (S.screen === 'list') S.listSub = 'All';
+  if (S.screen === 'detail') { const m = matById(S.params.id); if (m) S.sel = pickDefault(m); }
+  if (S.screen === 'edit') {
+    const m = matById(S.params.id); if (!m) return;
+    S.draft = { id: m.id, name: m.name, category: m.category, desc: m.desc || '', photo: m.photo || '',
+      variants: m.variants.map(x => ({ ...x, stock: { ...(x.stock || {}) } })), selId: S.params.sel || m.variants[0]?.id,
+      newColour: 'White', newSize: '', newG: 10, newF: 10, type: m.type || null };
+  }
+  if (S.screen === 'add') {
+    S.draft = { name: '', category: Store.categories.some(c => c.name === S.invCat) ? S.invCat : (Store.categories[0]?.name || 'Other'),
+      desc: '', photo: '', variants: [], newColour: 'White', newSize: '', newG: 10, newF: 10, type: null };
+  }
+  if (S.screen === 'catedit') {
+    const c = Store.categories.find(x => x.id === S.params.id);
+    const g = NEW_CAT_GRADS[Store.categories.length % NEW_CAT_GRADS.length];
+    S.draft = c ? { id: c.id, name: c.name, photo: c.photo || '', grad: c.grad, icon: c.icon || 'more', floor: c.floor === 'F' ? 'F' : 'G' }
+                : { id: '', name: '', photo: '', grad: g, icon: 'more', floor: 'G' };
+  }
+}
+function afterSignIn() {
+  S.cart = keepJSON('rrit_cart_' + me().email, []);
+  S.favs = keepJSON('rrit_favs_' + me().email, []);
+  S.stack = []; S.dir = 'fade'; S.f = { email: '', pass: '', pass2: '' }; S.authMsg = null;
+  S.screen = (!isAdmin() && !me().dept) ? 'profile' : (isAdmin() ? 'dash' : 'home');
+  Watch.reset(); Store.start(); render();
+}
+
+/* =====================================================================
+   7) SCREENS
+   ===================================================================== */
+const topbar = (title, right = '<span></span>') =>
+  `<header class="top"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back', 20)}</button><h1 class="t">${esc(title)}</h1>${right}</header>`;
+const stepper = (val, key, min, max, mini = false) =>
+  `<div class="stepper ${mini ? 'mini' : ''}">
+     <button data-a="step" data-k="${key}" data-d="-1" data-min="${min}" data-max="${max}" ${val <= min ? 'disabled' : ''} aria-label="Decrease">−</button>
+     <output>${val}</output>
+     <button data-a="step" data-k="${key}" data-d="1" data-min="${min}" data-max="${max}" ${val >= max ? 'disabled' : ''} aria-label="Increase">+</button>
+   </div>`;
+const statusPill = s => `<span class="pill ${s === 'Borrowed' || s === 'Checked' ? 'green' : s === 'Denied' || s === 'Cancelled' ? 'red' : 'amber'}">${s === 'Pending' ? 'Waiting for admin' : s}</span>`;
+const condPill = c => `<span class="pill ${c === 'Good' ? 'green' : c === 'Damaged' ? 'amber' : 'red'}">${c}</span>`;
+const floorSwitch = () => `<div class="tabs" role="tablist" aria-label="Store">${[['All', 'Mixed'], ['G', 'Ground'], ['F', 'First']].map(([k, l]) =>
+  `<button class="${S.floor === k ? 'on' : ''}" data-a="floor" data-v="${k}">${k === 'All' ? '' : icon('building', 14)} ${l}</button>`).join('')}</div>`;
+const pieces = r => r.items.reduce((a, it) => a + it.qty, 0);
+
+function matRow(m, i) {
+  const t = total(m);
+  const low = floorsOf(m).some(fl => m.variants.some(v => st(v, fl) < LOW_STOCK));
+  const pill = t === 0 ? '<span class="pill red">Out of stock</span>' : low ? '<span class="pill amber">Low stock</span>' : '';
+  return `<button class="row card" style="--i:${i}" data-a="open" data-v="${m.id}">
+    <span class="thumb">${art(m)}</span>
+    <span class="row-main"><b>${esc(m.name)}</b><small>${esc(m.desc || '')}</small><span class="tags">${floorsOf(m).map(floorTag).join('')}${typeTag(matType(m))}</span></span>${pill}${icon('chev', 18)}</button>`;
+}
+function reqCard(r, i, staff) {
+  const first = matById(r.items[0]?.materialId);
+  const title = r.items.length === 1 ? `${r.items[0].name} (${r.items[0].colour})` : `${r.items.length} items`;
+  const lines = r.items.map(it => {
+    const m = matById(it.materialId), v = m?.variants.find(x => x.id === it.variantId), have = st(v, r.floor);
+    const back = returnedQty(r.id, it.variantId), left = it.qty - back;
+    const warn = staff && r.status === 'Pending' && have < it.qty ? ` <span class="pill red">only ${have} left</span>` : '';
+    const ret = !staff && r.status === 'Borrowed' && recType(r) === 'borrow' ? (left > 0
+      ? `<button class="mini-link" data-a="openret" data-v="${r.id}" data-vid="${it.variantId}">${icon('undo', 14)} Return / report</button>`
+      : `<small class="ok-t">Returned</small>`) : '';
+    return `<li><span class="dot" style="--c:${hex(it.colour)}"></span><span class="grow">${esc(it.name)} (${esc(it.colour)}) <small>${esc(it.size)}</small>${warn}${back && left > 0 ? ` <small>· ${back} returned</small>` : ''}</span><b>${it.qty} pcs</b>${ret}</li>`;
+  }).join('');
+  return `<article class="card req" style="--i:${i}" id="r_${r.id}">
+    <div class="req-h">
+      ${staff ? `<span class="avatar">${esc(initials(r.name))}</span>` : `<span class="thumb sm">${first ? art(first) : ''}</span>`}
+      <div class="req-who"><b>${esc(staff ? r.name : title)}</b><small>${esc(staff ? `${r.dept} · ${r.userEmail}` : timeAgo(r.createdAt))}</small></div>
+      <div class="req-side">${floorTag(r.floor)}${recPill(r)}</div>
+    </div>
+    <div class="tags">${typeTag(recType(r))}${staff ? `<span class="time">${timeAgo(r.createdAt)}</span>` : ''}</div>
+    <ul class="req-items">${lines}</ul>
+    ${recType(r) === 'borrow' && r.dueAt && r.status !== 'Denied' ? `<p class="due ${isOverdue(r) ? 'late' : ''}">${icon(isOverdue(r) ? 'alert' : 'clock', 15)} ${outstanding(r) === 0 && r.status === 'Borrowed' ? 'All returned' : `Return by <b>${dueText(r.dueAt)}</b>${isOverdue(r) ? ' — overdue, not returned yet' : ''}`}</p>` : ''}
+    ${recType(r) === 'issue' && r.status === 'Borrowed' ? `<p class="due">${icon('check', 15)} Issued — non-returnable</p>` : ''}
+    <p class="reason">${icon('note', 15)}<span>${esc(r.purpose)}${r.note ? ' — ' + esc(r.note) : ''}</span></p>
+
+    ${r.kind === 'extra' ? `<p class="hint">${icon('info', 15)}<span>Request for more than ${MAX_TAKE}${r.status === 'Pending' ? ' — waiting for admin' : r.decidedBy ? ` — ${esc(r.status === 'Borrowed' ? (recType(r) === 'borrow' ? 'borrowing accepted' : 'issuing accepted') : 'denied')} by ${esc(r.decidedBy)}` : ''}</span></p>` : ''}
+    ${staff && r.status === 'Pending' ? `<div class="two"><button class="btn sm" data-a="approve" data-v="${r.id}">Approve</button><button class="btn sm ghost" data-a="reject" data-v="${r.id}">Deny</button></div>` : ''}
+    <p class="decided">${icon('clock', 14)} ${r.status === 'Pending' || r.status === 'Denied' ? 'Asked' : recType(r) === 'borrow' ? 'Borrowed' : 'Issued'} ${esc(dayLabel(r.status === 'Borrowed' ? (r.decidedAt || r.createdAt) : r.createdAt))}, ${clock(r.status === 'Borrowed' ? (r.decidedAt || r.createdAt) : r.createdAt)}</p>
+  </article>`;
+}
+function retCard(x, i, staff) {
+  return `<article class="card req" style="--i:${i}" id="t_${x.id}">
+    <div class="req-h"><span class="avatar">${esc(initials(x.name))}</span>
+      <div class="req-who"><b>${esc(staff ? x.name : x.itemName)}</b><small>${esc(staff ? `${x.dept} · ${x.userEmail}` : timeAgo(x.createdAt))}</small></div>
+      <div class="req-side">${floorTag(x.floor)}${staff ? `<span class="time">${timeAgo(x.createdAt)}</span>` : statusPill(x.status)}</div></div>
+    <ul class="req-items"><li><span class="dot" style="--c:${hex(x.colour)}"></span><span class="grow">${esc(x.itemName)} (${esc(x.colour)}) <small>${esc(x.size)}</small></span><b>${x.qty} pcs</b>${condPill(x.condition)}</li></ul>
+    ${x.feedback ? `<p class="reason">${icon('note', 15)}<span>${esc(x.feedback)}</span></p>` : ''}
+    ${staff && x.status === 'Pending' ? `<button class="btn sm" data-a="confirmret" data-v="${x.id}">${x.condition === 'Good' ? 'Confirm & add back to stock' : 'Confirm (not added back to stock)'}</button>` : ''}
+    ${x.status !== 'Pending' ? `<p class="decided">${staff ? statusPill('Checked') : ''}${x.decidedBy ? 'Checked by ' + esc(x.decidedBy) + ' · ' : ''}${timeAgo(x.decidedAt)}</p>` : ''}
+  </article>`;
+}
+const seenTime = () => Number(keep.get('rrit_seen_' + (Auth.user ? Auth.user.email : ''))) || 0;
+const notifCount = () => notifications().filter(n => n.fresh || n.low || n.ret).length;
+function notifications() {
+  const out = [];
+  const seenAt = seenTime();
+  overdueList().filter(r => inFloor(r.floor)).forEach(r => out.push({ t: r.dueAt, pin: true, ic: 'alert', a: 'act', v: 'Overdue', ret: true, low: true,
+    title: `Overdue · ${r.name} hasn't returned ${outstanding(r)} ${outstanding(r) === 1 ? 'item' : 'items'}`, sub: `${r.items.map(i => `${i.name} (${i.colour})`).join(', ')} · due ${dueText(r.dueAt)} · ${FLOORS[r.floor]}` }));
+  Store.requests.filter(r => r.status === 'Pending' && inFloor(r.floor)).forEach(r => out.push({ t: r.createdAt, ic: 'inbox', a: 'tab', v: 'incoming', ret: true,
+    title: `${r.name} asks for ${pieces(r)} pieces`, sub: `${r.dept} · ${r.items.map(i => `${i.name} (${i.colour})`).join(', ')} · ${FLOORS[r.floor]} · needs your OK` }));
+  Store.requests.filter(r => r.status === 'Borrowed' && inFloor(r.floor) && (r.createdAt > seenAt || dayLabel(r.createdAt) === 'Today')).forEach(r => out.push({ t: r.createdAt, ic: 'cart', a: 'tab', v: 'incoming', fresh: r.createdAt > seenAt,
+    title: `${r.name} took ${pieces(r)} ${pieces(r) === 1 ? 'piece' : 'pieces'}`, sub: `${r.dept} · ${r.items.map(i => `${i.qty} × ${i.name} (${i.colour})`).join(', ')} · ${FLOORS[r.floor]}` }));
+  Store.returns.filter(x => x.status === 'Pending' && inFloor(x.floor)).forEach(x => out.push({ t: x.createdAt, ic: 'undo', a: 'tab', v: 'returns', ret: true,
+    title: `${x.condition === 'Good' ? 'Item returned' : 'Damage reported'} · ${x.name}`, sub: `${x.qty} × ${x.itemName} (${x.condition}) · ${FLOORS[x.floor]}` }));
+  lowList().filter(l => inFloor(l.fl)).forEach(l => out.push({ t: 0, ic: 'alert', a: 'edit', v: l.m.id, sel: l.v.id, low: true,
+    title: `Restock needed · ${l.m.name} (${l.v.colour}, ${l.v.size})`, sub: `${FLOORS[l.fl]} · only ${st(l.v, l.fl)} left` }));
+  return out.sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || b.t - a.t);
+}
+
+const SCREENS = {
+  /* ---------- SIGN IN ---------- */
+  login() {
+    const admin = S.side === 'admin', mode = S.authMode, f = S.f, m = S.authMsg;
+    const title = 'Sign in';
+    const lightNow = document.documentElement.dataset.theme === 'light';
+    return `<button class="theme-fab" data-a="theme" data-v="${lightNow ? 'dark' : 'light'}" aria-label="Switch to ${lightNow ? 'dark' : 'light'} mode">${icon(lightNow ? 'moon' : 'sun', 20)}</button><div class="screen login fade">
+      <div class="logo">RRIT</div>
+      <div><h1 class="h1" style="font-size:30px">${esc(SCHOOL.siteName)}</h1>
+        <p class="muted">Resource Room Inventory Tracker</p><p class="school">${esc(SCHOOL.fullName)}</p></div>
+      <div class="tabs two-col" role="tablist">
+        <button class="${!admin ? 'on' : ''}" data-a="side" data-v="teacher" role="tab" aria-selected="${!admin}">${icon('user', 16)} Teacher</button>
+        <button class="${admin ? 'on' : ''}" data-a="side" data-v="admin" role="tab" aria-selected="${admin}">${icon('shield', 16)} Admin</button>
+      </div>
+      <div class="card signin-card">
+        <b style="font-size:16px">${title}</b>
+        <p class="hint">${icon('lock', 16)}<span>${admin ? 'Only the resource room admins can open this side. Use the admin password.' : `Use your school email (<b>firstname.lastname@${esc(SCHOOL.emailDomain)}</b>) and the teacher password. Students can't use this website.`}</span></p>
+        <label class="field"><span>School email</span><input type="email" data-in="f.email" value="${esc(f.email)}" autocomplete="username" placeholder="firstname.lastname@${esc(SCHOOL.emailDomain)}"></label>
+        <label class="field"><span>Password</span><input type="password" data-in="f.pass" value="${esc(f.pass)}" autocomplete="current-password" placeholder="${admin ? 'Admin password' : 'Teacher password'}"></label>
+        ${m ? `<p class="warn ${m.ok ? 'ok' : 'red'}">${icon(m.ok ? 'check' : 'alert', 16)} ${esc(m.text)}</p>` : ''}
+        ${IN_APP ? `<p class="hint" style="font-size:12px">${icon('info', 14)}<span>You opened this inside another app. If it gets stuck, tap <b>⋯</b> or <b>Share</b> → <b>Open in Safari / Chrome</b>.</span></p>` : ''}
+        <button class="btn" data-a="auth" ${S.busy ? 'disabled' : ''}>${S.busy ? 'Please wait…' : 'Sign in'}</button>
+
+      </div>
+      ${LIVE ? '' : `<span class="badge-preview">${icon('info', 14)} Preview — data is saved on this device only</span>`}
+    </div>`;
+  },
+
+  profile() {
+    return `<div style="display:flex;flex-direction:column;gap:6px;padding-top:30px"><h1 class="h1">One more thing</h1>
+      <p class="muted">So the resource room knows who took what. You only do this once.</p></div>
+      <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:14px">
+        <p class="hint">${icon('user', 16)}<span>Signed in as <b>${esc(me().email)}</b></span></p>
+        <label class="field"><span>Your name</span><input id="p_name" value="${esc(me().name)}" autocomplete="name" maxlength="50"></label>
+        <label class="field"><span>Department</span><input id="p_dept" value="${esc(me().dept)}" maxlength="40" placeholder="e.g. Science, Art, Primary"></label>
+      </div>
+      <button class="btn" data-a="saveprofile">Continue</button>`;
+  },
+
+  /* ---------- TEACHER ---------- */
+  home() {
+    return `<header class="hero"><div><span class="brand"><i></i>${esc(SCHOOL.siteName)}</span><h1 class="h1" style="margin-top:6px">Resource Room</h1><p class="muted">Find. Request. Create.</p></div>
+      <button class="avatar" data-a="account" aria-label="Account">${esc(initials(me().name))}</button></header>
+      <label class="search">${icon('search', 18)}<input type="search" placeholder="Search for materials..." value="${esc(S.q)}" data-in="q" aria-label="Search for materials"></label>
+      <div class="tabs" role="tablist" aria-label="Store">${[['All', 'Mixed'], ['G', 'Ground Floor'], ['F', 'First Floor']].map(([k, l]) =>
+        `<button class="${S.homeFloor === k ? 'on' : ''}" data-a="homefloor" data-v="${k}">${l}</button>`).join('')}</div>
+      <div id="results">${homeResults()}</div>`;
+  },
+
+  list() {
+    const cat = S.params.cat;
+    const ms = Store.materials.filter(m => m.category === cat);
+    const subs = ['All', ...ms.map(m => m.name)];
+    const shown = S.listSub === 'All' ? ms : ms.filter(m => m.name === S.listSub);
+    const c = catOf(cat);
+    return topbar(cat, `<span class="thumb sm">${catArt(c)}</span>`) +
+      `<p class="hint" style="margin-top:-6px">${icon('building', 16)}<span>Kept in: <b>${catFloorText(c.floor)}</b></span></p>
+       <div class="chips">${subs.map(s => `<button class="chip ${s === S.listSub ? 'on' : ''}" data-a="sub" data-v="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+       <div class="list stagger">${shown.length ? shown.map(matRow).join('') : '<p class="empty">Nothing in this category yet.</p>'}</div>`;
+  },
+
+  detail() {
+    const m = matById(S.params.id);
+    if (!m) return topbar('Not found') + '<p class="empty">This material was removed.</p>';
+    const sel = S.sel, fls = floorsOf(m);
+    if (!fls.includes(sel.floor)) sel.floor = fls[0];
+    const colours = [...new Set(m.variants.map(v => v.colour))];
+    const sizes = [...new Set(m.variants.map(v => v.size))];
+    const v = m.variants.find(x => x.colour === sel.colour && x.size === sel.size);
+    const inCart = v ? cartQty(v.id, sel.floor) : 0;
+    const have = st(v, sel.floor), canAdd = Math.max(0, Math.min(have, MAX_TAKE) - inCart);
+    const capped = have > MAX_TAKE;
+    sel.qty = Math.min(Math.max(1, sel.qty), Math.max(1, canAdd));
+    const fav = S.favs.includes(m.id);
+    return topbar(m.name, `<button class="icon-btn ${fav ? 'fav' : ''}" data-a="fav" data-v="${m.id}" aria-label="Save to favourites">${icon(fav ? 'heartF' : 'heart', 20)}</button>`) + `
+      <div class="hero-img">${art(m)}</div>
+      <div class="d-head"><h2 class="h1">${esc(m.name)}</h2>
+        <p class="avail ${have < LOW_STOCK ? 'low' : ''}">Available on the ${FLOORS[sel.floor]}: <b>${have}</b>${inCart ? ` · ${inCart} already in your cart` : ''}</p></div>
+      <section class="panel card">
+        <div class="opt"><div class="opt-h"><span>Colour</span><b>${esc(sel.colour)}</b></div>
+          <div class="swatches">${colours.map(c => `<button class="sw ${c === sel.colour ? 'on' : ''}" style="--c:${hex(c)}" data-a="colour" data-v="${esc(c)}" aria-label="${esc(c)}"></button>`).join('')}</div></div>
+        <div class="opt"><div class="opt-h"><span>Size</span></div>
+          <div class="pills">${sizes.map(z => {
+            const ok = m.variants.some(x => x.colour === sel.colour && x.size === z);
+            return `<button class="pill-btn ${z === sel.size ? 'on' : ''}" ${ok ? '' : 'disabled'} data-a="size" data-v="${esc(z)}">${esc(z)}</button>`;
+          }).join('')}</div></div>
+        <div class="opt"><div class="opt-h"><span>Collect from</span></div>
+          <div class="pills">${fls.map(fl => `<button class="pill-btn ${fl === sel.floor ? 'on' : ''}" data-a="pickfloor" data-v="${fl}">${icon('building', 15)} ${FLOORS[fl]} <small class="muted-s">· ${st(v, fl)} left</small></button>`).join('')}</div></div>
+        <div class="opt"><div class="opt-h"><span>Quantity</span><b>max ${MAX_TAKE} without asking</b></div>${stepper(canAdd ? sel.qty : 0, 'qty', 1, canAdd)}
+          ${capped ? `<button class="more-btn" data-a="openmore">${icon('plus', 16)} Need more than ${MAX_TAKE}? <b>Request more</b></button>` : ''}</div>
+      </section>
+      ${canAdd === 0 ? `<p class="warn">${icon('alert', 16)} ${have === 0 ? `Out of stock on the ${FLOORS[sel.floor]}${fls.length > 1 ? ' — try the other floor' : ''}.` : inCart >= MAX_TAKE ? `You already have ${MAX_TAKE} in your cart — the most you can take without asking.` : 'All available pieces are already in your cart.'}</p>` : ''}
+      <button class="btn" data-a="addcart" ${canAdd === 0 ? 'disabled' : ''}>Add to Cart</button>
+      <p class="type-note t-${matType(m)}">${icon(matType(m) === 'borrow' ? 'undo' : 'check', 16)}<span>${matType(m) === 'borrow'
+        ? '<b>Borrow</b> — this must be returned. You\'ll choose a return date in the cart.'
+        : '<b>Issue</b> — this is yours to keep. <b>Non-returnable.</b>'}</span></p>`;
+  },
+
+  cart() {
+    const lines = S.cart.map(l => {
+      const m = matById(l.materialId); const v = m?.variants.find(x => x.id === l.variantId);
+      return { ...l, m, stock: st(v, l.floor) };
+    });
+    if (!lines.length) return `<div class="page-h"><h1 class="h1">Cart</h1></div>
+      <div class="empty">${icon('cart', 40)}<p style="margin:0">Your cart is empty.</p><button class="btn ghost sm" style="width:auto;padding:0 20px" data-a="tab" data-v="home">Browse materials</button></div>`;
+    lines.forEach(l => { if (l.qty > MAX_TAKE) l.qty = MAX_TAKE; });
+    const warns = lines.filter(l => l.qty > l.stock);
+    const totalQty = lines.reduce((a, l) => a + l.qty, 0);
+    const floorsUsed = [...new Set(lines.map(l => l.floor))];
+    const hasBorrow = lines.some(l => (l.type || floorDefaultType(l.floor)) === 'borrow');
+    if (hasBorrow && !S.due) S.due = ymdIn(7);
+    const purposes = ['Class activity', 'Project', 'Competition', 'Assembly / event', 'Teaching aid', 'Other'];
+    const canSend = !warns.length && S.purpose && (!hasBorrow || endOfDay(S.due) >= Date.now());
+    return `<div class="page-h"><h1 class="h1">Cart</h1><button class="link" data-a="clearcart">Clear</button></div>
+      <div class="list stagger">${lines.map((l, i) => `<div class="row card" style="--i:${i}">
+        <span class="thumb">${l.m ? art(l.m) : ''}</span>
+        <span class="row-main"><b>${esc(l.name)} (${esc(l.colour)})</b><small>${esc(l.size)} • ${l.qty} pcs</small><span class="tags">${floorTag(l.floor)}${typeTag(l.type || floorDefaultType(l.floor))}</span>${stepper(l.qty, 'cart:' + i, 1, Math.max(Math.min(l.stock, MAX_TAKE), 1), true)}</span>
+        <button class="icon-btn sm" data-a="rmcart" data-v="${i}" aria-label="Remove">${icon('x', 18)}</button></div>`).join('')}</div>
+      ${warns.map(l => `<p class="warn">${icon('alert', 16)} Only ${l.stock} available for ${esc(l.name)} (${esc(l.colour)}) on the ${FLOORS[l.floor]}. Lower the quantity to send.</p>`).join('')}
+      ${floorsUsed.length > 1 ? `<p class="hint">${icon('info', 16)}<span>Your cart has items from both floors, so it will be recorded for <b>each store</b> separately.</span></p>` : ''}
+      <div class="opt"><div class="opt-h"><span>What's it for?</span></div>
+        <div class="pills">${purposes.map(p => `<button class="chip ${p === S.purpose ? 'on' : ''}" data-a="purpose" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+        <input class="input" data-in="note" value="${esc(S.note)}" maxlength="140" placeholder="Add a note (optional), e.g. Class 7B science model" aria-label="Note for the store"></div>
+      ${hasBorrow ? `<label class="field"><span>Return borrowed items by</span><input type="date" data-in="due" value="${esc(S.due)}" min="${ymdIn(0)}"></label>
+        <p class="hint">${icon('undo', 16)}<span>Only <b>Borrow</b> items need returning. <b>Issue</b> items are yours to keep.</span></p>` : ''}
+      <div class="sumrow card"><span class="muted" style="margin:0">Total items</span><b>${totalQty}</b></div>
+      <button class="btn" data-a="send" ${canSend ? '' : 'disabled'}>${S.purpose ? 'Take Items' : 'Choose what it\'s for first'}</button>`;
+  },
+
+  sent() {
+    const fls = [...new Set(S.lastSent.map(l => l.floor))];
+    return `<div class="sent">
+      <div class="plane">${icon('send', 44)}<span class="ok">${icon('check', 16)}</span></div>
+      <h1 class="h1">All set — take your items!</h1>
+      <p class="muted" style="max-width:300px">Recorded from the ${fls.map(f => FLOORS[f]).join(' and ')} store${fls.length > 1 ? 's' : ''}. No approval needed — the admin has been notified.</p>
+      ${S.lastSent.some(l => (l.type || floorDefaultType(l.floor)) === 'borrow') ? `<p class="type-note t-borrow">${icon('undo', 16)}<span>Please return borrowed items by <b>${dueText(endOfDay(S.lastDue))}</b>.</span></p>` : ''}
+      <div class="card items-box"><b style="font-size:14px">Items taken</b>
+        ${S.lastSent.map(l => { const m = matById(l.materialId); return `<div class="mini-row"><span class="thumb xs">${m ? art(m) : ''}</span><span>${esc(l.name)} (${esc(l.colour)}) ${typeTag(l.type || floorDefaultType(l.floor))}</span><b>${l.qty} pcs</b></div>`; }).join('')}</div>
+      <button class="btn" data-a="tab" data-v="myreqs">View My Items</button>
+      <button class="btn ghost" data-a="tab" data-v="home">Back to Home</button></div>`;
+  },
+
+  myreqs() {
+    const mine = Store.requests.filter(r => r.userEmail === me().email);
+    const myRets = Store.returns.filter(x => x.userEmail === me().email);
+    const tabs = ['Borrowed', 'Issued', 'Requests', 'Returns'];
+    let body;
+    if (S.myTab === 'Returns') body = myRets.length ? myRets.map((x, i) => retCard(x, i, false)).join('') : '<p class="empty">Items you return or report will show here.</p>';
+    else if (S.myTab === 'Requests') { const shown = mine.filter(r => r.kind === 'extra');
+      body = shown.length ? shown.map((r, i) => reqCard(r, i, false)).join('') : `<p class="empty">Requests for more than ${MAX_TAKE} pieces will show here.</p>`; }
+    else if (S.myTab === 'Issued') { const shown = mine.filter(r => r.status === 'Borrowed' && recType(r) === 'issue');
+      body = shown.length ? shown.map((r, i) => reqCard(r, i, false)).join('') : '<p class="empty">Things you take to keep will show here.</p>'; }
+    else { const shown = mine.filter(r => r.status === 'Borrowed' && recType(r) === 'borrow').sort((a, b) => isOverdue(b) - isOverdue(a));
+      body = shown.length ? shown.map((r, i) => reqCard(r, i, false)).join('') : '<p class="empty">Things you take will show up here.</p>'; }
+    return `<h1 class="h1">My Items</h1>
+      <div class="tabs four">${tabs.map(t => { const n = t === 'Requests' ? mine.filter(r => r.status === 'Pending').length : t === 'Borrowed' ? mine.filter(isOverdue).length : 0; return `<button class="${t === S.myTab ? 'on' : ''}" data-a="mytab" data-v="${t}">${t}${n ? ` (${n})` : ''}</button>`; }).join('')}</div>
+      ${S.myTab === 'Borrowed' ? `<p class="hint">${icon('undo', 16)}<span>Tap <b>Return / report</b> on an item to give it back or report it as damaged or broken.</span></p>` : ''}
+      <div class="list stagger">${body}</div>`;
+  },
+
+  /* ---------- ADMIN ---------- */
+  dash() {
+    const reqs = Store.requests.filter(r => inFloor(r.floor));
+    const takenToday = reqs.filter(r => r.status === 'Borrowed' && dayLabel(r.createdAt) === 'Today');
+    const rets = Store.returns.filter(x => x.status === 'Pending' && inFloor(x.floor));
+    const low = lowList().filter(l => inFloor(l.fl));
+    const today = takenToday.reduce((a, r) => a + pieces(r), 0);
+    const n = notifCount();
+    const menu = [['incoming', 'inbox', 'Who took what', Store.requests.filter(r => r.status === 'Pending' && inFloor(r.floor)).length], ['returns', 'undo', 'Returns & Damage', rets.length], ['inventory', 'grid', 'Manage Inventory', 0], ['history', 'clock', 'Usage History', 0]];
+    return `<header class="hero"><div><span class="brand"><i></i>${esc(SCHOOL.siteName)} · Admin</span><h1 class="h1" style="margin-top:6px">Resource Room</h1><p class="muted">Ground &amp; First Floor stores</p></div>
+      <div style="display:flex;gap:8px"><button class="icon-btn bell" data-a="go" data-v="notifs" aria-label="Notifications">${icon('bell', 20)}${n ? `<span class="badge amber">${n}</span>` : ''}</button>
+      <button class="avatar" data-a="account" aria-label="Account">${esc(initials(me().name))}</button></div></header>
+      ${floorSwitch()}
+      <div class="stats">
+        <button class="stat card" data-a="tab" data-v="incoming"><b>${takenToday.length}</b><span>Takes today</span></button>
+        <button class="stat card" data-a="tab" data-v="returns"><b>${rets.length}</b><span>Returns to check</span></button>
+        <button class="stat card" data-a="lowstock"><b>${low.length}</b><span>Need restocking</span>${low.length ? `<i class="tri">${icon('alert', 20)}</i>` : ''}</button>
+        <button class="stat card" data-a="act" data-v="Overdue"><b>${overdueList().filter(r => inFloor(r.floor)).length}</b><span>Overdue borrows</span>${overdueList().filter(r => inFloor(r.floor)).length ? `<i class="tri">${icon('alert', 20)}</i>` : ''}</button>
+      </div>
+      <div class="menu stagger">${menu.map((x, i) => `<button class="row card" style="--i:${i}" data-a="tab" data-v="${x[0]}"><span class="ic">${icon(x[1], 20)}</span><span class="row-main"><b>${x[2]}</b></span>${x[3] ? `<span class="pill amber">${x[3]}</span>` : ''}${icon('chev', 18)}</button>`).join('')}</div>
+      ${reqs.length ? `<div class="page-h"><h2 class="h2">Latest activity</h2><button class="link" data-a="tab" data-v="incoming">See all</button></div><div class="list">${reqs.filter(r => r.status === 'Borrowed').slice(0, 3).map((r, i) => reqCard(r, i, true)).join('')}</div>` : ''}`;
+  },
+
+  notifs() {
+    const list = notifications();
+    setTimeout(() => keep.set('rrit_seen_' + me().email, String(Date.now())), 0);
+    const canAsk = 'Notification' in window && Notification.permission === 'default';
+    return topbar('Notifications') + `
+      ${canAsk ? `<button class="btn ghost sm" data-a="askalerts">${icon('bell', 16)} Turn on pop-up alerts on this device</button>` : ''}
+      ${floorSwitch()}
+      <div class="list stagger">${list.length ? list.map((n, i) => `<button class="row card" style="--i:${i}" data-a="${n.a}" data-v="${n.v}" ${n.sel ? `data-sel="${n.sel}"` : ''}>
+        <span class="ic-round ${n.low ? 'amber' : ''}">${icon(n.ic, 18)}</span>${n.fresh ? '<span class="new-dot" aria-label="New"></span>' : ''}<span class="row-main"><b>${esc(n.title)}</b><small>${esc(n.sub)}${n.t ? ' · ' + timeAgo(n.t) : ''}</small></span>${icon('chev', 18)}</button>`).join('')
+        : '<p class="empty">All caught up — nothing needs you right now.</p>'}</div>`;
+  },
+
+  incoming() {
+    const f = S.actFilter;
+    const shown = Store.requests.filter(r => r.status !== 'Pending' && inFloor(r.floor) && (f === 'All' || (f === 'Overdue' ? isOverdue(r) : f === 'Borrowed' ? recType(r) === 'borrow' : recType(r) === 'issue')));
+    const waiting = Store.requests.filter(r => r.status === 'Pending' && inFloor(r.floor));
+    return `<h1 class="h1">Who took what</h1>
+      <p class="muted" style="margin-top:-10px">Teachers take up to ${MAX_TAKE} of an item directly. Bigger amounts come here for your OK.</p>${floorSwitch()}
+      <div class="chips">${['All', 'Borrowed', 'Issued', 'Overdue'].map(c => `<button class="chip ${c === f ? 'on' : ''}" data-a="actfilter" data-v="${c}">${c}${c === 'Overdue' && overdueList().length ? ` (${overdueList().length})` : ''}</button>`).join('')}</div>
+      ${waiting.length ? `<h2 class="h2">Requests for more — waiting for you (${waiting.length})</h2><div class="list">${waiting.map((r, i) => reqCard(r, i, true)).join('')}</div><h2 class="h2">Taken</h2>` : ''}
+      <div class="list stagger">${shown.length ? shown.map((r, i) => reqCard(r, i, true)).join('') : '<p class="empty">Nothing taken yet.</p>'}</div>`;
+  },
+
+  returns() {
+    const all = Store.returns.filter(x => inFloor(x.floor));
+    const shown = all.filter(x => S.retTab === 'Pending' ? x.status === 'Pending' : x.status !== 'Pending');
+    const damaged = all.filter(x => x.condition !== 'Good').reduce((a, x) => a + x.qty, 0);
+    return `<h1 class="h1">Returns &amp; Damage</h1>${floorSwitch()}
+      <div class="stats"><div class="stat card"><b>${all.filter(x => x.condition === 'Good').reduce((a, x) => a + x.qty, 0)}</b><span>Pieces returned in good condition</span></div>
+        <div class="stat card"><b>${damaged}</b><span>Damaged or broken</span>${damaged ? `<i class="tri">${icon('alert', 20)}</i>` : ''}</div></div>
+      <div class="tabs two-col">${['Pending', 'Checked'].map(t => `<button class="${t === S.retTab ? 'on' : ''}" data-a="rettab" data-v="${t}">${t === 'Pending' ? `To check (${all.filter(x => x.status === 'Pending').length})` : 'Checked'}</button>`).join('')}</div>
+      <div class="list stagger">${shown.length ? shown.map((x, i) => retCard(x, i, true)).join('') : '<p class="empty">Nothing here.</p>'}</div>`;
+  },
+
+  inventory() {
+    const chips = ['All', 'Low stock', ...Store.categories.map(c => c.name)];
+    let ms = Store.materials.filter(m => S.floor === 'All' || floorsOf(m).includes(S.floor));
+    if (S.invCat === 'Low stock') ms = ms.filter(m => floorsOf(m).some(fl => inFloor(fl) && m.variants.some(v => st(v, fl) < LOW_STOCK)));
+    else if (S.invCat !== 'All') ms = ms.filter(m => m.category === S.invCat);
+    return `<div class="page-h"><h1 class="h1">Inventory</h1><div style="display:flex;gap:8px"><button class="btn ghost sm" style="width:auto;padding:0 14px" data-a="go" data-v="cats">${icon('grid', 16)} Categories</button><button class="icon-btn primary" data-a="go" data-v="add" aria-label="Add new material">${icon('plus', 20)}</button></div></div>
+      ${floorSwitch()}
+      <div class="chips">${chips.map(c => `<button class="chip ${c === S.invCat ? 'on' : ''}" data-a="invcat" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+      <div class="list stagger">${ms.length ? ms.map((m, i) => {
+        const fls = floorsOf(m).filter(inFloor);
+        const low = fls.some(fl => m.variants.some(v => st(v, fl) < LOW_STOCK));
+        return `<button class="row card" style="--i:${i}" data-a="edit" data-v="${m.id}"><span class="thumb">${art(m)}</span>
+          <span class="row-main"><b>${esc(m.name)}</b><small>${fls.map(fl => `${fl === 'G' ? 'Ground' : 'First'}: ${m.variants.reduce((a, v) => a + st(v, fl), 0)} pcs`).join(' · ')}</small><small>${m.variants.length} option${m.variants.length === 1 ? '' : 's'}</small></span>
+          ${low ? '<span class="pill amber">Low</span>' : ''}${icon('chev', 18)}</button>`;
+      }).join('') : '<p class="empty">No materials here. Tap + to add one.</p>'}</div>`;
+  },
+
+  edit() {
+    const d = S.draft;
+    if (!d) return topbar('Not found') + '<p class="empty">This material was removed.</p>';
+    const cur = d.variants.find(v => v.id === d.selId) || d.variants[0];
+    const fls = floorsOfCat(d.category);
+    return topbar('Edit Material', `<button class="icon-btn danger" data-a="delmat" aria-label="Delete material">${icon('trash', 20)}</button>`) + `
+      <div class="photo-box" style="min-height:170px">${d.photo ? `<img src="${d.photo}" alt="">` : `<div class="thumb lg">${art(d)}</div>`}
+        <div class="acts">${photoButtons()}${d.photo ? `<button class="file-btn" data-a="rmphoto">${icon('image', 16)} Default</button>` : ''}</div></div>
+      <label class="field"><span>Name</span><input data-in="d.name" value="${esc(d.name)}" maxlength="60"></label>
+      <div class="grid2">
+        <label class="field"><span>Category</span><select data-in="d.category">${Store.categories.map(c => `<option ${c.name === d.category ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>
+        <label class="field"><span>Short description</span><input data-in="d.desc" value="${esc(d.desc)}" maxlength="60" placeholder="e.g. Various colours"></label>
+      </div>
+      <div class="opt"><div class="opt-h"><span>Issue or borrow?</span><b>On the ${esc(catFloorText(catOf(d.category).floor))}</b></div>
+        <div class="pills">${[['issue', 'Issue — they keep it'], ['borrow', 'Borrow — must return']].map(([k, l]) => `<button class="pill-btn ${(d.type || floorDefaultType(floorsOfCat(d.category)[0])) === k ? 'on' : ''}" data-a="mattype" data-v="${k}">${l}</button>`).join('')}</div></div>
+      <div class="opt"><div class="opt-h"><span>Options — tap one to change its stock</span></div>
+        <div class="opt-list">${d.variants.map(v => `<button class="opt-row ${cur && v.id === cur.id ? 'on' : ''}" data-a="selvar" data-v="${v.id}">
+          <span class="dot" style="--c:${hex(v.colour)}"></span><span class="grow">${esc(v.colour)} · ${esc(v.size)}</span>
+          ${fls.map(fl => `<span class="pill ${st(v, fl) < LOW_STOCK ? 'amber' : 'blue'}">${fl}: ${st(v, fl)}</span>`).join('')}
+          ${d.variants.length > 1 ? `<span class="icon-btn sm" data-a="rmvar" data-v="${v.id}" aria-label="Remove option">${icon('x', 16)}</span>` : ''}</button>`).join('')}</div></div>
+      ${cur ? fls.map(fl => `<div class="opt"><div class="opt-h"><span>Stock on the ${FLOORS[fl]}</span><b>${esc(cur.colour)} · ${esc(cur.size)}</b></div>
+        ${stepper(st(cur, fl), 'dstock:' + fl, 0, 99999)}
+        <div class="quick">${[5, 10, 25].map(n => `<button data-a="quick" data-v="${n}" data-fl="${fl}">+${n}</button>`).join('')}</div></div>`).join('') : ''}
+      ${optionAdder()}
+      <button class="btn" data-a="savemat">Save Changes</button>`;
+  },
+
+  add() {
+    const d = S.draft;
+    return topbar('Add New Material') + `
+      <div class="photo-box">${d.photo ? `<img src="${d.photo}" alt="">` : icon('image', 30)}
+        <div class="acts">${photoButtons()}</div>
+        ${d.photo ? '' : '<small style="color:var(--muted)">Optional — skip it to use a colour picture</small>'}</div>
+      <label class="field"><span>Name</span><input data-in="d.name" value="${esc(d.name)}" maxlength="60" placeholder="e.g. Foam Sheet"></label>
+      <div class="grid2">
+        <label class="field"><span>Category</span><select data-in="d.category">${Store.categories.map(c => `<option ${c.name === d.category ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>
+        <label class="field"><span>Short description</span><input data-in="d.desc" value="${esc(d.desc)}" maxlength="60" placeholder="e.g. Coloured foam"></label>
+      </div>
+      <div class="opt"><div class="opt-h"><span>Issue or borrow?</span><b>On the ${esc(catFloorText(catOf(d.category).floor))}</b></div>
+        <div class="pills">${[['issue', 'Issue — they keep it'], ['borrow', 'Borrow — must return']].map(([k, l]) => `<button class="pill-btn ${(d.type || floorDefaultType(floorsOfCat(d.category)[0])) === k ? 'on' : ''}" data-a="mattype" data-v="${k}">${l}</button>`).join('')}</div></div>
+      ${d.variants.length ? `<div class="opt"><div class="opt-h"><span>Options added</span></div><div class="opt-list">${d.variants.map(v =>
+        `<div class="opt-row"><span class="dot" style="--c:${hex(v.colour)}"></span><span class="grow">${esc(v.colour)} · ${esc(v.size)}</span>${floorsOfCat(d.category).map(fl => `<span class="pill blue">${fl}: ${st(v, fl)}</span>`).join('')}
+         <button class="icon-btn sm" data-a="rmvar" data-v="${v.id}" aria-label="Remove option">${icon('x', 16)}</button></div>`).join('')}</div></div>` : ''}
+      ${optionAdder(true)}
+      <button class="btn" data-a="savenew">Save</button>`;
+  },
+
+  cats() {
+    return topbar('Categories', `<button class="icon-btn primary" data-a="go" data-v="catedit" aria-label="Add category">${icon('plus', 20)}</button>`) + `
+      <p class="muted" style="margin-top:-6px">These are the picture tiles teachers see first. Tap one to change its name, floor or picture.</p>
+      <div class="list stagger">${Store.categories.map((c, i) => {
+        const n = Store.materials.filter(m => m.category === c.name).length;
+        return `<button class="row card" style="--i:${i}" data-a="catedit" data-v="${c.id}"><span class="thumb">${catArt(c, 26)}</span>
+          <span class="row-main"><b>${esc(c.name)}</b><small>${n} material${n === 1 ? '' : 's'} · ${catFloorText(c.floor)}</small></span>${icon('chev', 18)}</button>`;
+      }).join('')}</div>`;
+  },
+
+  catedit() {
+    const d = S.draft, isNew = !d.id;
+    const n = isNew ? 0 : Store.materials.filter(m => m.category === (Store.categories.find(c => c.id === d.id)?.name)).length;
+    return topbar(isNew ? 'New Category' : 'Edit Category', isNew ? '<span></span>' : `<button class="icon-btn danger" data-a="delcat" aria-label="Delete category">${icon('trash', 20)}</button>`) + `
+      <div class="cat" style="--g1:${d.grad[0]};--g2:${d.grad[1]};height:150px;pointer-events:none">
+        ${d.photo ? `<img class="cat-photo" src="${d.photo}" alt="">` : `<span class="cat-art">${icon(d.icon, 40)}</span>`}
+        <span class="cat-name">${esc(d.name || 'Category name')}</span><span class="cat-count">This is how teachers will see it</span></div>
+      <div class="photo-box" style="min-height:0"><div class="acts">${photoButtons()}${d.photo ? `<button class="file-btn" data-a="rmphoto">${icon('image', 16)} Use colour tile</button>` : ''}</div>
+        <small style="color:var(--muted)">Add a photo so everyone recognises it (optional)</small></div>
+      <label class="field"><span>Category name</span><input data-in="d.name" data-live="1" value="${esc(d.name)}" maxlength="30" placeholder="e.g. Craft Paper"></label>
+      <div class="opt"><div class="opt-h"><span>Which store is it in?</span></div>
+        <div class="pills">${[['G', 'Ground Floor'], ['F', 'First Floor']].map(([k, l]) => `<button class="pill-btn ${d.floor === k ? 'on' : ''}" data-a="catfloor" data-v="${k}">${esc(l)}</button>`).join('')}</div></div>
+      ${n ? `<p class="hint">${icon('info', 16)}<span>${n} material${n === 1 ? ' is' : 's are'} in this category. Renaming moves them too.</span></p>` : ''}
+      <button class="btn" data-a="savecat">${isNew ? 'Add Category' : 'Save Changes'}</button>`;
+  },
+
+  history() {
+    const rows = Store.requests.filter(r => r.status === 'Borrowed' && inFloor(r.floor))
+      .sort((a, b) => b.createdAt - a.createdAt).flatMap(r => r.items.map(it => ({ r, it })));
+    let lastDay = '';
+    const body = rows.map(({ r, it }, i) => {
+      const day = dayLabel(r.createdAt);
+      const head = day !== lastDay ? `<p class="day">${day}</p>` : ''; lastDay = day;
+      const m = matById(it.materialId), back = returnedQty(r.id, it.variantId);
+      return head + `<div class="card log-row" style="--i:${i}"><span class="thumb sm">${m ? art(m) : ''}</span>
+        <div class="row-main"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(r.name)}</b><small>${clock(r.createdAt)}</small></div>
+          <small>${esc(r.userEmail)} · ${esc(r.dept)}</small>
+          <span style="font-size:14px">${esc(it.name)} (${esc(it.colour)}, ${esc(it.size)}) <b style="color:var(--accent-t)">× ${it.qty}</b> ${floorTag(r.floor)} ${typeTag(recType(r))}</span>
+          <small>Purpose: ${esc(r.purpose)}${r.note ? ' — ' + esc(r.note) : ''}</small>
+          ${recType(r) === 'borrow' ? `<small class="${isOverdue(r) && it.qty - back > 0 ? 'late-t' : ''}">Return by ${r.dueAt ? dueText(r.dueAt) : '—'} · ${back >= it.qty ? 'returned' : back ? back + ' returned' : isOverdue(r) ? 'OVERDUE' : 'not returned yet'}</small>` : '<small>Issued — non-returnable</small>'}</div></div>`;
+    }).join('');
+    return `<div class="page-h"><h1 class="h1">Usage History</h1>${rows.length ? `<button class="icon-btn" data-a="csv" aria-label="Download as spreadsheet">${icon('download', 20)}</button>` : ''}</div>
+      <p class="muted" style="margin-top:-10px">Teacher, email, department, material, quantity, purpose — issued or borrowed.</p>
+      ${floorSwitch()}
+      <div class="list stagger">${body || '<p class="empty">Borrowed items will show up here.</p>'}</div>`;
+  }
+};
+
+function homeResults() {
+  if (S.q.trim()) {
+    const q = S.q.trim().toLowerCase();
+    const hits = Store.materials.filter(m => (S.homeFloor === 'All' || floorsOf(m)[0] === S.homeFloor) && (m.name + ' ' + m.category + ' ' + (m.desc || '') + ' ' + m.variants.map(v => v.colour).join(' ')).toLowerCase().includes(q));
+    return hits.length ? `<div class="list stagger">${hits.map(matRow).join('')}</div>` : `<p class="empty">No materials match "${esc(S.q)}".</p>`;
+  }
+  if (DB_PROBLEM) return `<p class="warn red">${icon('alert', 16)} ${esc(DB_PROBLEM)}</p>`;
+  if (!Store.categories.length) return `<p class="warn">${icon('info', 16)} ${Auth.user && Auth.user.canAdmin
+    ? 'Loading the starting categories… if nothing appears in a few seconds, refresh the page.'
+    : 'Nothing here yet. An admin (Kavita or Aditya) must sign in once to load the starting categories and materials. Then refresh.'}</p>`;
+  const cats = Store.categories.filter(c => S.homeFloor === 'All' || (c.floor === 'F' ? 'F' : 'G') === S.homeFloor);
+  return `<h2 class="h2" style="margin-bottom:12px">${S.homeFloor === 'G' ? 'Ground Floor' : S.homeFloor === 'F' ? 'First Floor' : 'All categories'}</h2><div class="cats stagger">${cats.map((c, i) => {
+    const n = Store.materials.filter(m => m.category === c.name).length;
+    return `<button class="cat" style="--i:${i};--g1:${c.grad[0]};--g2:${c.grad[1]}" data-a="cat" data-v="${esc(c.name)}">
+      ${c.photo ? `<img class="cat-photo" src="${c.photo}" alt="">` : `<span class="cat-art">${icon(c.icon || 'more', 40)}</span>`}
+      <span class="cat-name">${esc(c.name)}</span><span class="cat-count">${n} material${n === 1 ? '' : 's'} · ${c.floor === 'F' ? 'First Floor' : 'Ground Floor'}</span></button>`;
+  }).join('')}</div>`;
+}
+function photoButtons() {
+  return `<label class="file-btn">${icon('camera', 16)} Take Photo<input type="file" accept="image/*" capture="environment" data-file="1"></label>
+          <label class="file-btn">${icon('image', 16)} Upload<input type="file" accept="image/*" data-file="1"></label>`;
+}
+function optionAdder(isNew) {
+  const d = S.draft, fls = floorsOfCat(d.category);
+  return `<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:12px">
+    <b style="font-size:14px">${isNew ? 'Options (e.g. Colour, Size)' : 'Add another option'}</b>
+    <div class="grid2">
+      <label class="field"><span>Colour</span><select data-in="d.newColour">${Object.keys(COLOURS).map(c => `<option ${c === d.newColour ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+      <label class="field"><span>Size</span><input data-in="d.newSize" value="${esc(d.newSize)}" maxlength="20" placeholder="e.g. A4"></label>
+    </div>
+    ${fls.map(fl => `<div class="opt"><div class="opt-h"><span>Starting stock — ${FLOORS[fl]}</span></div>${stepper(d['new' + fl], 'new:' + fl, 0, 99999)}</div>`).join('')}
+    <button class="btn ghost sm" data-a="addvar">${icon('plus', 16)} Add Option</button></div>`;
+}
+
+function navHtml() {
+  if (!Auth.user || ['login', 'profile'].includes(S.screen)) return '';
+  const map = { list: 'home', detail: 'home', sent: 'myreqs', edit: 'inventory', add: 'inventory', cats: 'inventory', catedit: 'inventory', notifs: 'dash' };
+  const active = map[S.screen] || S.screen;
+  const items = isAdmin()
+    ? [['dash', 'home', 'Home'], ['incoming', 'clip', 'Activity', notifications().filter(n => n.fresh).length + Store.requests.filter(r => r.status === 'Pending' && inFloor(r.floor)).length, 'amber'],
+       ['returns', 'undo', 'Returns', Store.returns.filter(x => x.status === 'Pending' && inFloor(x.floor)).length, 'amber'],
+       ['inventory', 'grid', 'Inventory'], ['history', 'clock', 'History']]
+    : [['home', 'home', 'Home'], ['cart', 'cart', 'Cart', S.cart.length, '', S.bump],
+       ['myreqs', 'clip', 'My Items']];
+  S.bump = false;
+  return `<nav class="nav"><div class="nav-brand"><span class="nav-logo">RRIT</span><span><b>${esc(SCHOOL.siteName)}</b><small>${isAdmin() ? 'Admin' : 'Teacher'} · Resource Room</small></span></div>${items.map(([s, ic, label, n, cls, bump]) =>
+    `<button class="${active === s ? 'on' : ''}" data-a="tab" data-v="${s}">${icon(ic)}<span class="nav-label">${label}</span>${n ? `<span class="badge ${cls || ''} ${bump ? 'bump' : ''}">${n}</span>` : ''}</button>`).join('')}<button class="nav-me" data-a="account" aria-label="Account"><span class="avatar">${esc(initials(me().name))}</span><span><b>${esc(me().name)}</b><small>${esc(me().email)}</small></span></button></nav>`;
+}
+
+/* =====================================================================
+   8) RENDER + LIVE ALERTS
+   ===================================================================== */
+const ALLOWED = {
+  teacher: ['home', 'list', 'detail', 'cart', 'sent', 'myreqs', 'profile'],
+  admin: ['dash', 'notifs', 'incoming', 'returns', 'inventory', 'edit', 'add', 'history', 'cats', 'catedit', 'profile']
+};
+function render() {
+  if (!Auth.user) S.screen = 'login';
+  else if (!ALLOWED[Auth.user.role].includes(S.screen)) { S.screen = isAdmin() ? 'dash' : 'home'; S.stack = []; }
+  if (Auth.user && !Store.ready && S.screen !== 'profile') {
+    if (!S.loadStart) { S.loadStart = Date.now(); setTimeout(() => { if (!Store.ready) render(); }, 12500); }
+    const slow = Date.now() - S.loadStart > 12000;
+    $app.innerHTML = `<div class="loading" style="flex-direction:column;gap:18px;padding:24px;text-align:center">
+      ${DB_PROBLEM ? `<p class="warn red" style="max-width:420px">${icon('alert', 16)} ${esc(DB_PROBLEM)}</p>`
+        : `<div class="spin"></div>${slow ? `<p class="muted" style="max-width:380px">Still connecting to the database… Check your internet, then refresh the page (Cmd + Shift + R). School Wi-Fi sometimes blocks it — try a phone hotspot.</p>` : ''}`}
+      ${DB_PROBLEM || slow ? `<button class="btn ghost sm" style="max-width:220px" data-a="signout">Sign out</button>` : ''}</div>`;
+    return;
+  }
+  S.loadStart = 0;
+  const html = SCREENS[S.screen]();
+  $app.innerHTML = (S.screen === 'login' ? html : `<main class="screen ${S.dir}" data-screen="${S.screen}">${html}</main>`) + navHtml();
+  S.dir = 'none';
+}
+
+let redrawLater = false;
+const typing = () => { const a = document.activeElement; return a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && a.type !== 'file'; };
+Store.sub(() => { if (typing() || document.getElementById('modal').classList.contains('show')) { redrawLater = true; return; } render(); });
+document.addEventListener('focusout', () => setTimeout(() => { if (redrawLater && !typing() && !document.getElementById('modal').classList.contains('show')) { redrawLater = false; render(); } }, 50));
+
+// Pop-up alerts: new requests/returns and low stock (admins); approvals (teachers)
+function alertMe(title, body, action) {
+  toast(title + ' — ' + body, action);
+  try { if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') new Notification(title, { body }); } catch (e) {}
+}
+const Watch = {
+  seen: null, low: null,
+  reset() { this.seen = null; this.low = null; this.overdue = null; },
+  check() {
+    if (!Auth.user || !Store.ready) return;
+    const keys = new Map();
+    Store.requests.forEach(r => keys.set('q' + r.id, r.status));
+    Store.returns.forEach(x => keys.set('r' + x.id, x.status));
+    const low = new Set(lowList().map(l => l.key));
+    if (this.seen) {
+      if (Auth.user.canAdmin && isAdmin()) {
+        Store.requests.forEach(r => { if (!this.seen.has('q' + r.id) && r.status === 'Pending') alertMe('Request for more', `${r.name} (${r.dept}) asks for ${pieces(r)} pieces · ${FLOORS[r.floor]}`, { a: 'tab', v: 'incoming', label: 'View' }); });
+        Store.requests.forEach(r => { if (!this.seen.has('q' + r.id) && r.status === 'Borrowed') alertMe(recType(r) === 'borrow' ? 'Items borrowed' : 'Items issued', `${r.name} (${r.dept}) took ${pieces(r)} ${pieces(r) === 1 ? 'piece' : 'pieces'} · ${FLOORS[r.floor]}`, { a: 'tab', v: 'incoming', label: 'View' }); });
+        Store.returns.forEach(x => { if (!this.seen.has('r' + x.id) && x.status === 'Pending') alertMe(x.condition === 'Good' ? 'Item returned' : 'Damage reported', `${x.qty} × ${x.itemName} · ${FLOORS[x.floor]}`, { a: 'tab', v: 'returns', label: 'View' }); });
+        lowList().forEach(l => { if (!this.low.has(l.key)) alertMe('Restock needed', `${l.m.name} (${l.v.colour}) · ${FLOORS[l.fl]}: ${st(l.v, l.fl)} left`, { a: 'go', v: 'notifs', label: 'View' }); });
+      } else if (!isAdmin()) {
+        Store.requests.forEach(r => { const was = this.seen.get('q' + r.id); if (was && was !== r.status && r.userEmail === me().email) alertMe(r.status === 'Borrowed' ? (recType(r) === 'borrow' ? 'Borrowing accepted — you can take it' : 'Issuing accepted — you can take it') : 'Request denied', `${pieces(r)} pcs · ${FLOORS[r.floor]}`, { a: 'tab', v: 'myreqs', label: 'View' }); });
+        Store.returns.forEach(x => { const was = this.seen.get('r' + x.id); if (was && was !== x.status && x.userEmail === me().email) alertMe('Return checked', `${x.qty} × ${x.itemName}`, { a: 'tab', v: 'myreqs', label: 'View' }); });
+      }
+    }
+    if (Auth.user.canAdmin && isAdmin()) {
+      const od = overdueList();
+      if (!this.overdue) { if (od.length) alertMe('Overdue borrows', `${od.length} borrowed ${od.length === 1 ? 'item has' : 'items have'} not been returned on time`, { a: 'act', v: 'Overdue', label: 'View' }); }
+      else od.forEach(r => { if (!this.overdue.has(r.id)) alertMe('Overdue', `${r.name} hasn't returned ${r.items.map(i => i.name).join(', ')} (due ${dueText(r.dueAt)})`, { a: 'act', v: 'Overdue', label: 'View' }); });
+      this.overdue = new Set(od.map(r => r.id));
+    }
+    this.seen = keys; this.low = low;
+  }
+};
+Store.sub(() => Watch.check());
+setInterval(() => { if (Auth.user && Store.ready) { Watch.check(); if (!typing() && !document.getElementById('modal').classList.contains('show')) render(); } }, 60000);
+
+let toastTimer;
+function toast(msg, action) {
+  const el = document.getElementById('toast');
+  el.innerHTML = `<span>${esc(msg)}</span>${action ? `<button data-a="${action.a}" data-v="${action.v || ''}">${esc(action.label)}</button>` : ''}`;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+let modalResolve = null;
+function openModal(html) { document.getElementById('toast').classList.remove('show'); const m = document.getElementById('modal'); m.innerHTML = `<div class="sheet">${html}</div>`; m.classList.add('show'); }
+function closeModal(val) {
+  document.getElementById('modal').classList.remove('show'); S.ret = null; S.more = null;
+  if (modalResolve) { modalResolve(val); modalResolve = null; }
+  if (redrawLater) { redrawLater = false; render(); }
+}
+function ask(title, text, okLabel, danger) {
+  openModal(`<h3 class="h2">${esc(title)}</h3><p>${esc(text)}</p>
+    <div class="two"><button class="btn ghost sm" data-a="modal" data-v="0">Cancel</button><button class="btn sm ${danger ? 'danger' : ''}" data-a="modal" data-v="1">${esc(okLabel)}</button></div>`);
+  return new Promise(r => { modalResolve = r; });
+}
+document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(false); });
+
+// Return / report sheet
+function renderMore() {
+  const x = S.more; if (!x) return;
+  const purposes = ['Class activity', 'Project', 'Competition', 'Assembly / event', 'Teaching aid', 'Other'];
+  openModal(`<h3 class="h2">Request more</h3>
+    <p>${esc(x.name)} (${esc(x.colour)}, ${esc(x.size)}) · ${FLOORS[x.floor]} · ${x.have} available</p>
+    <div class="opt"><div class="opt-h"><span>How many do you need?</span><b>${MAX_TAKE + 1} to ${x.have}</b></div>${stepper(x.qty, 'more', MAX_TAKE + 1, x.have)}</div>
+    <div class="opt"><div class="opt-h"><span>What's it for?</span></div>
+      <div class="pills">${purposes.map(p => `<button class="chip ${p === x.purpose ? 'on' : ''}" data-a="morepurpose" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div></div>
+    ${x.type === 'borrow' ? `<label class="field"><span>Return by</span><input type="date" data-in="m.due" value="${esc(x.due)}" min="${ymdIn(0)}"></label>` : `<p class="type-note t-issue">${icon('check', 16)}<span><b>Issue</b> — yours to keep, non-returnable.</span></p>`}
+    <label class="field"><span>Why do you need more?</span><input data-in="m.note" value="${esc(x.note)}" maxlength="160" placeholder="e.g. Whole class of 35 for a science model"></label>
+    <p id="more_err" class="warn red" style="display:none"></p>
+    <button class="btn" data-a="sendmore">Send to admin</button>
+    <button class="btn ghost sm" data-a="modal" data-v="0">Cancel</button>`);
+}
+function renderReturn() {
+  const r = S.ret; if (!r) return;
+  const need = r.condition !== 'Good';
+  openModal(`<h3 class="h2">Return or report</h3>
+    <p>${esc(r.item.name)} (${esc(r.item.colour)}, ${esc(r.item.size)}) · ${FLOORS[r.floor]}</p>
+    <div class="opt"><div class="opt-h"><span>How many?</span><b>up to ${r.max}</b></div>${stepper(r.qty, 'ret', 1, r.max)}</div>
+    <div class="opt"><div class="opt-h"><span>Condition</span></div>
+      <div class="pills">${['Good', 'Damaged', 'Broken'].map(c => `<button class="pill-btn ${c === r.condition ? 'on' : ''}" data-a="retcond" data-v="${c}">${c}</button>`).join('')}</div></div>
+    <label class="field"><span>Feedback ${need ? '(what happened?)' : '(optional)'}</span><input data-in="r.feedback" value="${esc(r.feedback)}" maxlength="200" placeholder="${need ? 'e.g. Handle cracked during the activity' : 'Anything the store should know'}"></label>
+    <p id="ret_err" class="warn red" style="display:none"></p>
+    <button class="btn" data-a="sendret">Send to the store</button>
+    <button class="btn ghost sm" data-a="modal" data-v="0">Cancel</button>`);
+}
+
+/* =====================================================================
+   9) BUTTON ACTIONS
+   ===================================================================== */
+const A = {
+  back, tab: v => tab(v), go: v => go(v),
+  modal: v => closeModal(v === '1'),
+  theme: v => { applyTheme(v); if (document.getElementById('modal').classList.contains('show') && Auth.user) { closeModal(); A.account(); } else render(); },
+  homefloor: v => { S.homeFloor = v; keep.set('rrit_homefloor', v); render(); },
+  act: v => { S.actFilter = v; tab('incoming'); },
+  actfilter: v => { S.actFilter = v; render(); },
+  mattype: v => { S.draft.type = v; render(); },
+  side: v => { S.side = v; S.authMsg = null; render(); },
+  mode: v => { S.authMode = v; S.authMsg = null; S.f.pass = ''; S.f.pass2 = ''; render(); },
+  auth: async () => {
+    const f = S.f; S.busy = true; S.authMsg = null; render();
+    try {
+      const r = await Auth.signIn(f.email, f.pass, S.side);
+      if (r === 'verify') { S.f.pass = ''; S.authMsg = { ok: true, text: 'Almost there! We sent a link to your school inbox (check Junk too). Click it, then sign in again.' }; }
+    } catch (e) { S.authMsg = { ok: false, text: e.message }; S.f.pass = ''; }
+    S.busy = false; if (!Auth.user) render();
+  },
+  saveprofile: () => {
+    const name = document.getElementById('p_name').value.trim(), dept = document.getElementById('p_dept').value.trim();
+    if (!name || !dept) return toast('Fill in your name and department');
+    Auth.saveProfile(name.slice(0, 50), dept.slice(0, 40)); tab(isAdmin() ? 'dash' : 'home');
+  },
+  account: () => {
+    openModal(`<div style="display:flex;align-items:center;gap:12px"><span class="avatar">${esc(initials(me().name))}</span>
+      <div><b>${esc(me().name)}</b><p style="font-size:13px">${esc(me().email)}${me().dept ? ' · ' + esc(me().dept) : ''}</p></div></div>
+      <p class="hint">${icon(isAdmin() ? 'shield' : 'user', 16)}<span>Using the <b>${isAdmin() ? 'Admin' : 'Teacher'}</b> side</span></p>
+      ${themeSeg()}
+      ${me().canSwitch ? `<button class="btn sm" data-a="switchside">${icon(isAdmin() ? 'user' : 'shield', 18)} Switch to ${isAdmin() ? 'Teacher' : 'Admin'} side</button>` : ''}
+      ${!isAdmin() ? `<button class="btn ghost sm" data-a="editprofile">Change name or department</button>` : ''}
+      <button class="btn danger sm" data-a="signout">${icon('logout', 18)} Sign out</button>
+      <button class="btn ghost sm" data-a="modal" data-v="0">Close</button>`);
+  },
+  editprofile: () => { closeModal(); go('profile'); },
+  switchside: () => { closeModal(); Auth.switchSide(); afterSignIn(); toast(isAdmin() ? 'Now on the Admin side' : 'Now on the Teacher side'); },
+  signout: async () => { closeModal(); await Auth.signOut(); S.stack = []; S.q = ''; S.dir = 'fade'; S.authMode = 'signin'; render(); },
+  floor: v => { S.floor = v; keep.set('rrit_floor', v); render(); },
+  askalerts: async () => { try { await Notification.requestPermission(); } catch (e) {} render(); },
+  cat: v => go('list', { cat: v }),
+  sub: v => { S.listSub = v; render(); },
+  open: v => go('detail', { id: v }),
+  fav: v => {
+    S.favs = S.favs.includes(v) ? S.favs.filter(x => x !== v) : [...S.favs, v];
+    keep.set('rrit_favs_' + me().email, JSON.stringify(S.favs)); render();
+  },
+  colour: v => {
+    const m = matById(S.params.id);
+    S.sel.colour = v;
+    if (!m.variants.some(x => x.colour === v && x.size === S.sel.size)) S.sel.size = m.variants.find(x => x.colour === v).size;
+    S.sel.qty = 1; render();
+  },
+  size: v => { S.sel.size = v; S.sel.qty = 1; render(); },
+  pickfloor: v => { S.sel.floor = v; S.sel.qty = 1; render(); },
+  step: (v, el) => {
+    const k = el.dataset.k, d = +el.dataset.d, min = +el.dataset.min, max = +el.dataset.max;
+    const clamp = x => Math.min(max, Math.max(min, x));
+    if (k === 'qty') S.sel.qty = clamp(S.sel.qty + d);
+    else if (k === 'ret') { S.ret.qty = clamp(S.ret.qty + d); renderReturn(); return; }
+    else if (k === 'more') { S.more.qty = clamp(S.more.qty + d); renderMore(); return; }
+    else if (k.startsWith('cart:')) { const l = S.cart[+k.slice(5)]; l.qty = clamp(l.qty + d); saveCart(); }
+    else if (k.startsWith('dstock:')) { const fl = k.slice(7), cur = S.draft.variants.find(x => x.id === S.draft.selId) || S.draft.variants[0]; cur.stock[fl] = clamp(st(cur, fl) + d); }
+    else if (k.startsWith('new:')) { const fl = k.slice(4); S.draft['new' + fl] = clamp(S.draft['new' + fl] + d); }
+    render();
+  },
+  addcart: () => {
+    const m = matById(S.params.id);
+    const v = m.variants.find(x => x.colour === S.sel.colour && x.size === S.sel.size);
+    const line = S.cart.find(l => l.variantId === v.id && l.floor === S.sel.floor);
+    if (line) line.qty += S.sel.qty;
+    else S.cart.push({ materialId: m.id, variantId: v.id, name: m.name, colour: v.colour, size: v.size, floor: S.sel.floor, type: matType(m), qty: S.sel.qty });
+    saveCart(); S.bump = true; S.sel.qty = 1; render();
+    toast('Added to cart', { a: 'tab', v: 'cart', label: 'View cart' });
+  },
+  rmcart: v => { S.cart.splice(+v, 1); saveCart(); render(); },
+  clearcart: async () => { if (await ask('Clear cart?', 'This removes everything from your cart.', 'Clear', true)) { S.cart = []; saveCart(); render(); } },
+  purpose: v => { S.purpose = v; render(); },
+  send: async (v, el) => {
+    el.disabled = true; el.textContent = 'Sending…';
+    try {
+      const items = S.cart.map(({ materialId, variantId, name, colour, size, qty, floor, type }) => ({ materialId, variantId, name, colour, size, qty, floor, type: type || floorDefaultType(floor) }));
+      // one record per store + kind (issue / borrow)
+      const groups = [...new Set(items.map(i => i.floor + '|' + (i.type || floorDefaultType(i.floor))))];
+      for (const g of groups) {
+        const [fl, type] = g.split('|');
+        const rec = { userEmail: me().email, name: me().name, dept: me().dept, floor: fl, type,
+          items: items.filter(i => i.floor + '|' + (i.type || floorDefaultType(i.floor)) === g).map(({ floor, type, ...rest }) => rest), purpose: S.purpose, note: S.note.trim().slice(0, 140) };
+        if (type === 'borrow') rec.dueAt = endOfDay(S.due);
+        await Store.take(rec);
+      }
+      S.lastSent = items; S.lastDue = S.due; S.cart = []; S.purpose = ''; S.note = ''; S.due = ''; saveCart();
+      S.stack = []; S.screen = 'sent'; S.dir = 'fade'; render(); window.scrollTo(0, 0);
+    } catch (e) { toast('Could not send: ' + e.message); render(); }
+  },
+  mytab: v => { S.myTab = v; render(); },
+  stafftab: v => { S.tab = v; render(); },
+  rettab: v => { S.retTab = v; render(); },
+  approve: v => decide(v, true),
+  reject: v => decide(v, false),
+  openmore: () => {
+    const m = matById(S.params.id), v = m.variants.find(x => x.colour === S.sel.colour && x.size === S.sel.size), have = st(v, S.sel.floor);
+    S.more = { materialId: m.id, variantId: v.id, name: m.name, colour: v.colour, size: v.size, floor: S.sel.floor, type: matType(m), due: ymdIn(7), have, qty: Math.min(have, MAX_TAKE + 1), purpose: '', note: '' };
+    renderMore();
+  },
+  morepurpose: v => { S.more.purpose = v; renderMore(); },
+  sendmore: async () => {
+    const x = S.more, err = t => { const e = document.getElementById('more_err'); e.textContent = t; e.style.display = 'flex'; };
+    if (!x.purpose) return err("Choose what it's for.");
+    if (!x.note.trim()) return err('Say why you need more.');
+    if (x.type === 'borrow' && endOfDay(x.due) < Date.now()) return err('Choose a return date from today onwards.');
+    try {
+      await Store.sendRequest({ kind: 'extra', type: x.type, ...(x.type === 'borrow' ? { dueAt: endOfDay(x.due) } : {}), userEmail: me().email, name: me().name, dept: me().dept, floor: x.floor,
+        items: [{ materialId: x.materialId, variantId: x.variantId, name: x.name, colour: x.colour, size: x.size, qty: x.qty }],
+        purpose: x.purpose, note: x.note.trim().slice(0, 160) });
+      closeModal(); S.myTab = 'Requests'; toast('Request sent to the admin', { a: 'tab', v: 'myreqs', label: 'View' });
+    } catch (e) { err('Could not send: ' + e.message); }
+  },
+  openret: (v, el) => {
+    const r = Store.requests.find(x => x.id === v), it = r.items.find(i => i.variantId === el.dataset.vid);
+    const max = it.qty - returnedQty(r.id, it.variantId);
+    S.ret = { requestId: r.id, floor: r.floor, item: it, max, qty: max, condition: 'Good', feedback: '' };
+    renderReturn();
+  },
+  retcond: v => { S.ret.condition = v; renderReturn(); },
+  sendret: async () => {
+    const r = S.ret;
+    if (r.condition !== 'Good' && !r.feedback.trim()) { const e = document.getElementById('ret_err'); e.textContent = 'Please say what happened to it.'; e.style.display = 'flex'; return; }
+    try {
+      await Store.sendReturn({ requestId: r.requestId, userEmail: me().email, name: me().name, dept: me().dept, floor: r.floor,
+        materialId: r.item.materialId, variantId: r.item.variantId, itemName: r.item.name, colour: r.item.colour, size: r.item.size,
+        qty: r.qty, condition: r.condition, feedback: r.feedback.trim().slice(0, 200) });
+      closeModal(); S.myTab = 'Returns'; render();
+      toast(r.condition === 'Good' ? 'Return sent to the store' : 'Damage report sent to the store');
+    } catch (e) { toast('Could not send: ' + e.message); }
+  },
+  confirmret: async v => {
+    const card = document.getElementById('t_' + v); card?.classList.add('leaving');
+    try { await Store.confirmReturn(v, me().name); toast('Return checked'); }
+    catch (e) { card?.classList.remove('leaving'); toast(e.message); }
+    render();
+  },
+  lowstock: () => { S.invCat = 'Low stock'; tab('inventory'); },
+  invcat: v => { S.invCat = v; render(); },
+  edit: (v, el) => go('edit', { id: v, sel: el.dataset.sel }),
+  selvar: v => { S.draft.selId = v; render(); },
+  rmvar: v => {
+    S.draft.variants = S.draft.variants.filter(x => x.id !== v);
+    if (S.draft.selId === v) S.draft.selId = S.draft.variants[0]?.id;
+    render();
+  },
+  quick: (v, el) => { const cur = S.draft.variants.find(x => x.id === S.draft.selId) || S.draft.variants[0]; cur.stock[el.dataset.fl] = st(cur, el.dataset.fl) + +v; render(); },
+  addvar: () => {
+    const d = S.draft, size = d.newSize.trim() || 'Standard';
+    if (d.variants.some(x => x.colour === d.newColour && x.size.toLowerCase() === size.toLowerCase())) return toast('That colour and size already exists');
+    const stock = {}; floorsOfCat(d.category).forEach(fl => { stock[fl] = d['new' + fl]; });
+    const v = { id: uid(), colour: d.newColour, size, stock };
+    d.variants.push(v); d.selId = v.id; d.newSize = ''; render();
+    toast(`Added ${v.colour} · ${v.size}`);
+  },
+  rmphoto: () => { S.draft.photo = ''; render(); },
+  savemat: async () => {
+    const d = S.draft;
+    if (!d.name.trim()) return toast('Give the material a name');
+    if (!d.variants.length) return toast('Add at least one option');
+    try {
+      await Store.updateMaterial(d.id, { name: d.name.trim(), category: d.category, desc: d.desc.trim(), photo: d.photo, variants: d.variants, type: d.type || floorDefaultType(floorsOfCat(d.category)[0]) });
+      toast('Changes saved'); back();
+    } catch (e) { toast('Could not save: ' + e.message); }
+  },
+  savenew: async () => {
+    const d = S.draft;
+    if (!d.name.trim()) return toast('Give the material a name');
+    const stock = {}; floorsOfCat(d.category).forEach(fl => { stock[fl] = d['new' + fl]; });
+    const variants = d.variants.length ? d.variants : [{ id: uid(), colour: d.newColour, size: d.newSize.trim() || 'Standard', stock }];
+    try {
+      await Store.addMaterial({ type: d.type || floorDefaultType(floorsOfCat(d.category)[0]), name: d.name.trim(), category: d.category, desc: d.desc.trim() || [...new Set(variants.map(v => v.colour))].join(' / '), photo: d.photo, variants });
+      toast(`${d.name.trim()} added`); S.invCat = 'All'; back();
+    } catch (e) { toast('Could not save: ' + e.message); }
+  },
+  delmat: async () => {
+    if (!await ask(`Delete ${S.draft.name}?`, 'It will disappear for everyone. This cannot be undone.', 'Delete', true)) return;
+    await Store.deleteMaterial(S.draft.id); toast('Material deleted'); back();
+  },
+  catedit: v => go('catedit', { id: v }),
+  catfloor: v => { S.draft.floor = v === 'F' ? 'F' : 'G'; render(); },
+  savecat: async () => {
+    const d = S.draft, name = d.name.trim();
+    if (!name) return toast('Give the category a name');
+    if (Store.categories.some(c => c.name.toLowerCase() === name.toLowerCase() && c.id !== d.id)) return toast('A category with this name already exists');
+    try {
+      if (d.id) await Store.updateCategory(d.id, { name, photo: d.photo, floor: d.floor });
+      else await Store.addCategory({ name, photo: d.photo, grad: d.grad, icon: d.icon, floor: d.floor });
+      toast(d.id ? 'Category saved' : `${name} added`); back();
+    } catch (e) { toast('Could not save: ' + e.message); }
+  },
+  delcat: async () => {
+    const c = Store.categories.find(x => x.id === S.draft.id);
+    const n = Store.materials.filter(m => m.category === c.name).length;
+    if (n) return toast(`Move or delete its ${n} material${n === 1 ? '' : 's'} first`);
+    if (!await ask(`Delete ${c.name}?`, 'Teachers will no longer see this category.', 'Delete', true)) return;
+    await Store.deleteCategory(c.id); toast('Category deleted'); back();
+  },
+  csv: () => {
+    const rows = [['Date', 'Time', 'Teacher', 'Email', 'Department', 'Store', 'Issue / Borrow', 'Material', 'Colour', 'Size', 'Quantity', 'Purpose', 'Note', 'Return by', 'Returned', 'Status']];
+    Store.requests.filter(r => r.status === 'Borrowed' && inFloor(r.floor)).forEach(r => r.items.forEach(it => {
+      const b = recType(r) === 'borrow', back = returnedQty(r.id, it.variantId);
+      rows.push([new Date(r.createdAt).toLocaleDateString(), clock(r.createdAt), r.name, r.userEmail, r.dept, FLOORS[r.floor], b ? 'Borrow' : 'Issue',
+        it.name, it.colour, it.size, it.qty, r.purpose, r.note || '', b && r.dueAt ? dueText(r.dueAt) : '', b ? back : 'n/a',
+        !b ? (r.kind === 'extra' ? 'Issuing accepted' : 'Issued') : back >= it.qty ? 'Returned' : isOverdue(r) ? 'OVERDUE' : (r.kind === 'extra' ? 'Borrowing accepted' : 'Borrowed')]);
+    }));
+    const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = 'ahis-rrit-usage.csv'; a.click();
+  }
+};
+
+async function decide(id, approve) {
+  const card = document.getElementById('r_' + id);
+  card?.classList.add('leaving');
+  try {
+    await Store.decide(id, approve, me().name);
+    const r = Store.requests.find(x => x.id === id);
+    toast(approve ? (r && recType(r) === 'borrow' ? 'Borrowing accepted — stock updated' : 'Issuing accepted — stock updated') : 'Request denied');
+  } catch (e) {
+    card?.classList.remove('leaving');
+    toast(e.message);
+  }
+  render();
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-a]');
+  if (!el || el.disabled) return;
+  const fn = A[el.dataset.a];
+  if (fn) { e.preventDefault(); e.stopPropagation(); fn(el.dataset.v, el, e); }
+});
+document.addEventListener('input', e => {
+  const k = e.target.dataset.in; if (!k) return;
+  if (k === 'q') { S.q = e.target.value; document.getElementById('results').innerHTML = homeResults(); return; }
+  if (k === 'note') { S.note = e.target.value; return; }
+  if (k === 'due') { S.due = e.target.value; render(); return; }
+  if (k.startsWith('f.')) { S.f[k.slice(2)] = e.target.value; return; }
+  if (k.startsWith('r.') && S.ret) { S.ret[k.slice(2)] = e.target.value; return; }
+  if (k.startsWith('m.') && S.more) { S.more[k.slice(2)] = e.target.value; return; }
+  if (k.startsWith('d.') && S.draft) {
+    S.draft[k.slice(2)] = e.target.value;
+    if (e.target.dataset.live) { const t = document.querySelector('.cat .cat-name'); if (t) t.textContent = e.target.value || 'Category name'; }
+  }
+});
+document.addEventListener('change', async e => {
+  if (e.target.tagName === 'SELECT' && e.target.dataset.in && S.draft) { S.draft[e.target.dataset.in.slice(2)] = e.target.value; render(); }
+  if (e.target.dataset.file && e.target.files[0]) {
+    toast('Adding photo…');
+    try { S.draft.photo = await compressImage(e.target.files[0]); render(); toast('Photo added'); }
+    catch (err) { toast('That photo could not be read — try another'); }
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && S.screen === 'login' && e.target.dataset.in?.startsWith('f.')) { e.target.dispatchEvent(new Event('input', { bubbles: true })); A.auth(); }
+  if (e.key === 'Escape' && document.getElementById('modal').classList.contains('show')) closeModal(false);
+});
+
+/* =====================================================================
+   10) START
+   ===================================================================== */
+Auth.init(() => { if (Auth.user) afterSignIn(); else { Store.stop(); render(); } });
+
+</script>
+</body>
+</html>

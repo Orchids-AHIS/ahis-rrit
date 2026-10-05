@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()  { return request.auth != null; }
+    function email()     { return request.auth.token.email.lower(); }
+    function isAdmin()   { return signedIn() && email() in [
+                             'kavita.patil@avalonheights.co.in',
+                             'aditya1755@avalonheights.co.in'
+                           ]; }
+    function isTeacher() { return signedIn() && (isAdmin()
+                             || email().matches('^[a-z]+(-[a-z]+)*[.][a-z]+(-[a-z]+)*@avalonheights[.]co[.]in$')); }
+    function own()       { return resource.data.userEmail == email(); }
+
+    // Built-in categories/materials (ids start with "seed-") can be loaded by whoever signs in first
+    match /categories/{id} {
+      allow read: if isTeacher();
+      allow write: if isAdmin();
+      allow create: if isTeacher() && id.matches('^seed-.*');
+    }
+
+    match /materials/{id} {
+      allow read: if isTeacher();
+      allow create, delete: if isAdmin();
+      allow create: if isTeacher() && id.matches('^seed-.*');
+      allow update: if isAdmin()
+        || (isTeacher() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['variants']));
+    }
+
+    match /requests/{id} {
+      allow read: if isAdmin() || (isTeacher() && own());
+      allow create: if isTeacher() && request.resource.data.userEmail == email()
+                    && (request.resource.data.status == 'Borrowed'
+                        || (request.resource.data.status == 'Pending' && request.resource.data.kind == 'extra'));
+      allow update, delete: if isAdmin();
+    }
+
+    match /returns/{id} {
+      allow read: if isAdmin() || (isTeacher() && own());
+      allow create: if isTeacher() && request.resource.data.userEmail == email() && request.resource.data.status == 'Pending';
+      allow update, delete: if isAdmin();
+    }
+  }
+}
