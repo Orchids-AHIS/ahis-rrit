@@ -294,7 +294,8 @@ button.row:active{transform:scale(.98)}
 .f-G{background:rgba(61,220,151,.15);color:#6BE6B0}
 .f-F{background:rgba(169,140,255,.18);color:#CDBEFF}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
-.req-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.req-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.req-who small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .req-items li{flex-wrap:wrap}
 .req-items .grow{flex:1;min-width:0}
 .mini-link{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--accent-t);padding:6px 0;width:100%;justify-content:flex-end}
@@ -321,6 +322,41 @@ html[data-theme=light] .type-note.t-borrow{background:rgba(194,65,12,.07);border
 .tabs.four{grid-template-columns:repeat(4,minmax(0,1fr))}
 .tabs.four button{font-size:12px}
 .search,.tabs,.hero,.page-h{flex-shrink:0}
+.nrow{position:relative}
+.nrow .row{width:100%;padding-right:44px}
+.x-btn{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(148,163,184,.16);color:#94A3B8;border:0;cursor:pointer;transition:background .15s,color .15s}
+.x-btn:hover{background:rgba(148,163,184,.3);color:#E2E8F0}
+html[data-theme=light] .x-btn{background:rgba(100,116,139,.12);color:#64748B}
+html[data-theme=light] .x-btn:hover{background:rgba(100,116,139,.22);color:#1E293B}
+.clear-all{display:block;width:fit-content;margin:-4px 0 -6px auto;font-size:13px}
+.btn{flex-shrink:0}
+.day-h{margin:14px 0 2px;font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--muted);text-transform:uppercase}
+.row.hist{cursor:default}
+.row-main .when{display:flex;align-items:center;gap:4px;margin-top:3px;opacity:.85}
+.toast-x{margin-left:4px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:rgba(148,163,184,.18)!important;color:#64748B!important;flex-shrink:0}
+.dates{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0}
+.dates span{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:12px;background:rgba(148,163,184,.08)}
+.dates small{font-size:11px;color:var(--muted)}
+.dates b{font-size:13px}
+.red-t{color:var(--red-t);display:flex;align-items:center;gap:8px}
+.stats.three{grid-template-columns:repeat(3,1fr)}
+.card.od{cursor:pointer}
+@media (hover:hover) and (pointer:fine){
+  .hover-card .hover-act{opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s}
+  .hover-card:hover .hover-act,.hover-card:focus-within .hover-act{opacity:1;transform:none}
+}
+#print{display:none}
+@media print{
+  body>*:not(#print){display:none!important}
+  body{background:#fff!important}
+  #print{display:block;color:#000;font:12px/1.4 Arial,sans-serif;padding:10px}
+  #print h1{font-size:18px;margin:0 0 4px}
+  #print p{margin:0 0 12px;color:#333}
+  #print table{width:100%;border-collapse:collapse}
+  #print th,#print td{border:1px solid #999;padding:5px 6px;text-align:left;vertical-align:top}
+  #print th{background:#eee}
+}
 .new-dot{width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);margin-left:-8px;align-self:flex-start}
 .ic-round.amber{background:rgba(245,165,36,.14);color:var(--amber-t)}
 .tabs button{padding:0 4px}
@@ -450,6 +486,7 @@ html[data-theme=light] .nav-me{background:rgba(255,255,255,.7)!important}
 <div id="app"><div class="loading"><div class="spin"></div></div></div>
 <div id="modal" role="dialog" aria-modal="true"></div>
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="print"></div>
 
 
 <script>
@@ -485,6 +522,7 @@ const FIREBASE_CONFIG = {
   appId: "1:901654852750:web:f3187e588d54c7918485df"
 };
 
+const MAX_BORROW_DAYS = 7;  // longer than this needs admin approval
 const MAX_TAKE = 5;    // most pieces of one item a teacher can take without asking
 const LOW_STOCK = 5;   // below this number → "low stock, please restock" alert
 const FLOORS = { G: 'Ground Floor', F: 'First Floor' };
@@ -631,6 +669,7 @@ const ICONS = {
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   alert: '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/>',
+  print: '<path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v6H7z"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   send: '<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>',
@@ -1018,6 +1057,15 @@ const Store = (() => {
         doc => ({ items: approve ? doc.items : [], floor: doc.floor, sign: -1,
           patch: { status: approve ? 'Borrowed' : 'Denied', decidedAt: Date.now(), decidedBy: by } }));
     },
+    // Admin marks everything still out on a borrow as returned (goes back into stock)
+    async markReturned(id, by) {
+      const r = requests.find(x => x.id === id); if (!r) throw new Error('Not found');
+      const left = r.items.map(it => ({ ...it, qty: it.qty - returnedQty(id, it.variantId) })).filter(it => it.qty > 0);
+      return stockTxn('requests', id,
+        doc => { if (!doc || doc.status !== 'Borrowed') throw new Error('This borrow is not open'); if (!left.length) throw new Error('Already returned'); },
+        doc => { const back = { ...(doc.adminBack || {}) }; left.forEach(it => { back[it.variantId] = (back[it.variantId] || 0) + it.qty; });
+          return { items: left, floor: doc.floor, sign: 1, patch: { adminBack: back, returnedAt: Date.now(), returnedBy: by } }; });
+    },
     // Teacher returns an item or reports damage
     async sendReturn(r) { return add('returns', { ...r, status: 'Pending', createdAt: Date.now() }); },
     // Admin checks the return: good items go back into stock, damaged/broken don't
@@ -1064,7 +1112,31 @@ const recLabel = r => r.status === 'Pending' ? 'Waiting for admin' : r.status ==
   : isOverdue(r) ? 'Overdue' : recType(r) === 'borrow' ? (outstanding(r) === 0 ? 'Returned' : r.kind === 'extra' ? 'Borrowing accepted' : 'Borrowed')
   : (r.kind === 'extra' ? 'Issuing accepted' : 'Issued');
 const recPill = r => { const l = recLabel(r); return `<span class="pill ${l === 'Overdue' || l === 'Denied' ? 'red' : l === 'Waiting for admin' ? 'amber' : 'green'}">${l}</span>`; };
-const returnedQty = (reqId, vid) => Store.returns.filter(x => x.requestId === reqId && x.variantId === vid).reduce((a, x) => a + x.qty, 0);
+const returnedQty = (reqId, vid) => Store.returns.filter(x => x.requestId === reqId && x.variantId === vid).reduce((a, x) => a + x.qty, 0)
+  + (((Store.requests.find(r => r.id === reqId) || {}).adminBack || {})[vid] || 0);
+// Whole days late (0 = on time). Due dates are end-of-day.
+const itemReturnedAt = (r, vid) => Math.max(r.returnedAt && (r.adminBack || {})[vid] ? r.returnedAt : 0,
+  ...Store.returns.filter(x => x.requestId === r.id && x.variantId === vid).map(x => x.createdAt), 0);
+const lateDays = (dueAt, at) => dueAt && at > dueAt ? Math.ceil((at - dueAt) / 864e5) : 0;
+const borrowDays = ymd => Math.round((endOfDay(ymd) - endOfDay(ymdIn(0))) / 864e5);
+const shortDate = ts => ts ? new Date(ts).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const lateText = n => n ? `${n} day${n === 1 ? '' : 's'} late` : 'On time';
+// Everything that has been handed back (teacher returns the admin checked + items the admin marked returned)
+function checkedReturns() {
+  const out = [];
+  Store.returns.filter(x => x.status !== 'Pending' && inFloor(x.floor)).forEach(x => {
+    const r = Store.requests.find(q => q.id === x.requestId) || {};
+    out.push({ key: 'x' + x.id, name: x.name, dept: x.dept, email: x.userEmail, floor: x.floor, items: [{ name: x.itemName, colour: x.colour, size: x.size, qty: x.qty }],
+      borrowedAt: r.createdAt, dueAt: r.dueAt, returnedAt: x.createdAt, by: x.decidedBy, legacy: x.condition && x.condition !== 'Good' ? x.condition : '' });
+  });
+  Store.requests.filter(r => r.returnedAt && inFloor(r.floor)).forEach(r => {
+    const back = r.adminBack || {};
+    out.push({ key: 'q' + r.id, name: r.name, dept: r.dept, email: r.userEmail, floor: r.floor,
+      items: r.items.filter(it => back[it.variantId]).map(it => ({ name: it.name, colour: it.colour, size: it.size, qty: back[it.variantId] })),
+      borrowedAt: r.createdAt, dueAt: r.dueAt, returnedAt: r.returnedAt, by: r.returnedBy });
+  });
+  return out.sort((a, b) => b.returnedAt - a.returnedAt);
+}
 
 function go(screen, params = {}) {
   S.stack.push({ screen: S.screen, params: S.params });
@@ -1145,7 +1217,7 @@ function reqCard(r, i, staff) {
     const back = returnedQty(r.id, it.variantId), left = it.qty - back;
     const warn = staff && r.status === 'Pending' && have < it.qty ? ` <span class="pill red">only ${have} left</span>` : '';
     const ret = !staff && r.status === 'Borrowed' && recType(r) === 'borrow' ? (left > 0
-      ? `<button class="mini-link" data-a="openret" data-v="${r.id}" data-vid="${it.variantId}">${icon('undo', 14)} Return / report</button>`
+      ? `<button class="mini-link" data-a="openret" data-v="${r.id}" data-vid="${it.variantId}">${icon('undo', 14)} Return</button>`
       : `<small class="ok-t">Returned</small>`) : '';
     return `<li><span class="dot" style="--c:${hex(it.colour)}"></span><span class="grow">${esc(it.name)} (${esc(it.colour)}) <small>${esc(it.size)}</small>${warn}${back && left > 0 ? ` <small>· ${back} returned</small>` : ''}</span><b>${it.qty} pcs</b>${ret}</li>`;
   }).join('');
@@ -1157,40 +1229,94 @@ function reqCard(r, i, staff) {
     </div>
     <div class="tags">${typeTag(recType(r))}${staff ? `<span class="time">${timeAgo(r.createdAt)}</span>` : ''}</div>
     <ul class="req-items">${lines}</ul>
-    ${recType(r) === 'borrow' && r.dueAt && r.status !== 'Denied' ? `<p class="due ${isOverdue(r) ? 'late' : ''}">${icon(isOverdue(r) ? 'alert' : 'clock', 15)} ${outstanding(r) === 0 && r.status === 'Borrowed' ? 'All returned' : `Return by <b>${dueText(r.dueAt)}</b>${isOverdue(r) ? ' — overdue, not returned yet' : ''}`}</p>` : ''}
+    ${recType(r) === 'borrow' && r.dueAt && r.status !== 'Denied' ? `<p class="due ${isOverdue(r) ? 'late' : ''}">${icon(isOverdue(r) ? 'alert' : 'clock', 15)} ${outstanding(r) === 0 && r.status === 'Borrowed' ? `All returned${r.returnedAt ? ' · ' + shortDate(r.returnedAt) + ' · ' + lateText(lateDays(r.dueAt, r.returnedAt)) : ''}` : `Return by <b>${dueText(r.dueAt)}</b>${isOverdue(r) ? ' — overdue, not returned yet' : ''}`}</p>` : ''}
     ${recType(r) === 'issue' && r.status === 'Borrowed' ? `<p class="due">${icon('check', 15)} Issued — non-returnable</p>` : ''}
     <p class="reason">${icon('note', 15)}<span>${esc(r.purpose)}${r.note ? ' — ' + esc(r.note) : ''}</span></p>
 
-    ${r.kind === 'extra' ? `<p class="hint">${icon('info', 15)}<span>Request for more than ${MAX_TAKE}${r.status === 'Pending' ? ' — waiting for admin' : r.decidedBy ? ` — ${esc(r.status === 'Borrowed' ? (recType(r) === 'borrow' ? 'borrowing accepted' : 'issuing accepted') : 'denied')} by ${esc(r.decidedBy)}` : ''}</span></p>` : ''}
+    ${r.kind === 'extra' ? `<p class="hint">${icon('info', 15)}<span>${r.long ? `Asked to borrow for ${Math.max(1, Math.round((r.dueAt - r.createdAt) / 864e5))} days (more than a week)` : `Request for more than ${MAX_TAKE}`}${r.status === 'Pending' ? ' — waiting for admin' : r.decidedBy ? ` — ${esc(r.status === 'Borrowed' ? (recType(r) === 'borrow' ? 'borrowing accepted' : 'issuing accepted') : 'denied')} by ${esc(r.decidedBy)}` : ''}</span></p>` : ''}
+    ${staff && r.status === 'Borrowed' && recType(r) === 'borrow' && outstanding(r) > 0 ? `<button class="btn sm ghost" data-a="odopen" data-v="${r.id}">${icon('check', 16)} Mark returned</button>` : ''}
     ${staff && r.status === 'Pending' ? `<div class="two"><button class="btn sm" data-a="approve" data-v="${r.id}">Approve</button><button class="btn sm ghost" data-a="reject" data-v="${r.id}">Deny</button></div>` : ''}
     <p class="decided">${icon('clock', 14)} ${r.status === 'Pending' || r.status === 'Denied' ? 'Asked' : recType(r) === 'borrow' ? 'Borrowed' : 'Issued'} ${esc(dayLabel(r.status === 'Borrowed' ? (r.decidedAt || r.createdAt) : r.createdAt))}, ${clock(r.status === 'Borrowed' ? (r.decidedAt || r.createdAt) : r.createdAt)}</p>
   </article>`;
 }
 function retCard(x, i, staff) {
-  return `<article class="card req" style="--i:${i}" id="t_${x.id}">
+  const r = Store.requests.find(q => q.id === x.requestId) || {};
+  const late = lateDays(r.dueAt, x.createdAt);
+  return `<article class="card req hover-card" style="--i:${i}" id="t_${x.id}">
     <div class="req-h"><span class="avatar">${esc(initials(x.name))}</span>
       <div class="req-who"><b>${esc(staff ? x.name : x.itemName)}</b><small>${esc(staff ? `${x.dept} · ${x.userEmail}` : timeAgo(x.createdAt))}</small></div>
-      <div class="req-side">${floorTag(x.floor)}${staff ? `<span class="time">${timeAgo(x.createdAt)}</span>` : statusPill(x.status)}</div></div>
-    <ul class="req-items"><li><span class="dot" style="--c:${hex(x.colour)}"></span><span class="grow">${esc(x.itemName)} (${esc(x.colour)}) <small>${esc(x.size)}</small></span><b>${x.qty} pcs</b>${condPill(x.condition)}</li></ul>
+      <div class="req-side">${floorTag(x.floor)}${staff ? `<span class="time">${timeAgo(x.createdAt)}</span>` : statusPill(x.status === 'Pending' ? 'Pending' : 'Checked')}</div></div>
+    <ul class="req-items"><li><span class="dot" style="--c:${hex(x.colour)}"></span><span class="grow">${esc(x.itemName)} (${esc(x.colour)}) <small>${esc(x.size)}</small></span><b>${x.qty} pcs</b>${x.condition && x.condition !== 'Good' ? condPill(x.condition) : ''}</li></ul>
+    ${r.dueAt ? `<p class="due ${late ? 'late' : ''}">${icon(late ? 'alert' : 'clock', 15)}<span>Due ${shortDate(r.dueAt)} · handed back ${shortDate(x.createdAt)} · <b>${lateText(late)}</b></span></p>` : ''}
     ${x.feedback ? `<p class="reason">${icon('note', 15)}<span>${esc(x.feedback)}</span></p>` : ''}
-    ${staff && x.status === 'Pending' ? `<button class="btn sm" data-a="confirmret" data-v="${x.id}">${x.condition === 'Good' ? 'Confirm & add back to stock' : 'Confirm (not added back to stock)'}</button>` : ''}
-    ${x.status !== 'Pending' ? `<p class="decided">${staff ? statusPill('Checked') : ''}${x.decidedBy ? 'Checked by ' + esc(x.decidedBy) + ' · ' : ''}${timeAgo(x.decidedAt)}</p>` : ''}
+    ${staff && x.status === 'Pending' ? `<button class="btn sm hover-act" data-a="confirmret" data-v="${x.id}">${icon('check', 16)} Returned</button>` : ''}
+    ${x.status !== 'Pending' ? `<p class="decided">${x.decidedBy ? 'Checked by ' + esc(x.decidedBy) + ' · ' : ''}${timeAgo(x.decidedAt)}</p>` : ''}
+  </article>`;
+}
+// Overdue borrow (admin "To check")
+function odCard(r, i) {
+  const late = lateDays(r.dueAt, Date.now());
+  return `<article class="card req hover-card od" style="--i:${i}" id="o_${r.id}" data-a="odopen" data-v="${r.id}" tabindex="0" role="button">
+    <div class="req-h"><span class="avatar">${esc(initials(r.name))}</span>
+      <div class="req-who"><b>${esc(r.name)}</b><small>${esc(r.dept)} · ${esc(r.userEmail)}</small></div>
+      <div class="req-side">${floorTag(r.floor)}<span class="pill red">${late} day${late === 1 ? '' : 's'} overdue</span></div></div>
+    <ul class="req-items">${r.items.map(it => { const left = it.qty - returnedQty(r.id, it.variantId); return left > 0 ? `<li><span class="dot" style="--c:${hex(it.colour)}"></span><span class="grow">${esc(it.name)} (${esc(it.colour)}) <small>${esc(it.size)}</small></span><b>${left} pcs</b></li>` : ''; }).join('')}</ul>
+    <p class="due late">${icon('alert', 15)}<span>Borrowed ${shortDate(r.createdAt)} · due <b>${shortDate(r.dueAt)}</b></span></p>
+    <button class="btn sm hover-act" data-a="markret" data-v="${r.id}">${icon('check', 16)} Returned</button>
+  </article>`;
+}
+// Something that has been handed back (admin "Checked")
+function doneCard(c, i) {
+  const late = lateDays(c.dueAt, c.returnedAt);
+  return `<article class="card req" style="--i:${i}">
+    <div class="req-h"><span class="avatar">${esc(initials(c.name))}</span>
+      <div class="req-who"><b>${esc(c.name)}</b><small>${esc(c.dept)} · ${esc(c.email)}</small></div>
+      <div class="req-side">${floorTag(c.floor)}<span class="pill ${late ? 'red' : 'green'}">${lateText(late)}</span></div></div>
+    <ul class="req-items">${c.items.map(it => `<li><span class="dot" style="--c:${hex(it.colour)}"></span><span class="grow">${esc(it.name)} (${esc(it.colour)}) <small>${esc(it.size)}</small></span><b>${it.qty} pcs</b>${c.legacy ? condPill(c.legacy) : ''}</li>`).join('')}</ul>
+    <div class="dates"><span><small>Borrowed</small><b>${shortDate(c.borrowedAt)}</b></span><span><small>Due</small><b>${shortDate(c.dueAt)}</b></span><span class="${late ? 'late-t' : ''}"><small>Returned</small><b>${shortDate(c.returnedAt)}, ${clock(c.returnedAt)}</b></span></div>
+    ${c.by ? `<p class="decided">Checked by ${esc(c.by)}</p>` : ''}
   </article>`;
 }
 const seenTime = () => Number(keep.get('rrit_seen_' + (Auth.user ? Auth.user.email : ''))) || 0;
-const notifCount = () => notifications().filter(n => n.fresh || n.low || n.ret).length;
+// Notifications the admin cleared with ✕ (saved on this device, per person)
+const dismissKey = () => 'rrit_dismissed_' + (Auth.user ? Auth.user.email : '');
+const dismissed = () => new Set(keepJSON(dismissKey(), []));
+function dismiss(keys) {
+  const d = dismissed(); keys.forEach(k => d.add(k));
+  keep.set(dismissKey(), JSON.stringify([...d].slice(-3000)));
+}
+const recentNotifs = () => { const d = dismissed(); return notifications().filter(n => !d.has(n.k)); };
+const notifCount = () => recentNotifs().filter(n => n.fresh || n.low || n.ret).length;
+const dateTime = ts => new Date(ts).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + clock(ts);
+// Everything that ever happened, newest first (for the History tab)
+function historyNotifs() {
+  const out = [];
+  Store.requests.filter(r => inFloor(r.floor)).forEach(r => {
+    const items = r.items.map(i => `${i.qty} × ${i.name} (${i.colour})`).join(', ');
+    if (r.kind === 'extra') out.push({ t: r.createdAt, ic: 'inbox', title: `${r.name} asked for ${pieces(r)} pieces`, sub: `${r.dept} · ${items} · ${FLOORS[r.floor]}` });
+    else out.push({ t: r.createdAt, ic: 'cart', title: `${r.name} ${recType(r) === 'borrow' ? 'borrowed' : 'took (issued)'} ${pieces(r)} ${pieces(r) === 1 ? 'piece' : 'pieces'}`, sub: `${r.dept} · ${items} · ${FLOORS[r.floor]}` });
+    if (r.kind === 'extra' && r.decidedAt) out.push({ t: r.decidedAt, ic: r.status === 'Denied' ? 'x' : 'check', title: `${r.status === 'Denied' ? 'Request denied' : recType(r) === 'borrow' ? 'Borrowing accepted' : 'Issuing accepted'} · ${r.name}`, sub: `${items}${r.decidedBy ? ' · by ' + r.decidedBy : ''}` });
+    if (r.returnedAt) out.push({ t: r.returnedAt, ic: 'check', title: `Marked returned · ${r.name}`, sub: `${r.items.filter(it => (r.adminBack || {})[it.variantId]).map(it => `${r.adminBack[it.variantId]} × ${it.name}`).join(', ')} · ${lateText(lateDays(r.dueAt, r.returnedAt))}${r.returnedBy ? ' · by ' + r.returnedBy : ''}` });
+    if (isOverdue(r)) out.push({ t: r.dueAt, ic: 'alert', low: true, title: `Overdue · ${r.name} hasn't returned ${outstanding(r)} ${outstanding(r) === 1 ? 'item' : 'items'}`, sub: `${r.items.map(i => i.name).join(', ')} · was due ${dueText(r.dueAt)}` });
+  });
+  Store.returns.filter(x => inFloor(x.floor)).forEach(x => {
+    out.push({ t: x.createdAt, ic: 'undo', title: `Item returned · ${x.name}`, sub: `${x.qty} × ${x.itemName} · ${FLOORS[x.floor]}` });
+    if (x.status !== 'Pending' && x.decidedAt) out.push({ t: x.decidedAt, ic: 'check', title: `Return checked · ${x.name}`, sub: `${x.qty} × ${x.itemName}${x.decidedBy ? ' · by ' + x.decidedBy : ''}` });
+  });
+  return out.filter(n => n.t).sort((a, b) => b.t - a.t);
+}
 function notifications() {
   const out = [];
   const seenAt = seenTime();
-  overdueList().filter(r => inFloor(r.floor)).forEach(r => out.push({ t: r.dueAt, pin: true, ic: 'alert', a: 'act', v: 'Overdue', ret: true, low: true,
+  overdueList().filter(r => inFloor(r.floor)).forEach(r => out.push({ k: 'o' + r.id, t: r.dueAt, pin: true, ic: 'alert', a: 'tab', v: 'returns', ret: true, low: true,
     title: `Overdue · ${r.name} hasn't returned ${outstanding(r)} ${outstanding(r) === 1 ? 'item' : 'items'}`, sub: `${r.items.map(i => `${i.name} (${i.colour})`).join(', ')} · due ${dueText(r.dueAt)} · ${FLOORS[r.floor]}` }));
-  Store.requests.filter(r => r.status === 'Pending' && inFloor(r.floor)).forEach(r => out.push({ t: r.createdAt, ic: 'inbox', a: 'tab', v: 'incoming', ret: true,
-    title: `${r.name} asks for ${pieces(r)} pieces`, sub: `${r.dept} · ${r.items.map(i => `${i.name} (${i.colour})`).join(', ')} · ${FLOORS[r.floor]} · needs your OK` }));
-  Store.requests.filter(r => r.status === 'Borrowed' && inFloor(r.floor) && (r.createdAt > seenAt || dayLabel(r.createdAt) === 'Today')).forEach(r => out.push({ t: r.createdAt, ic: 'cart', a: 'tab', v: 'incoming', fresh: r.createdAt > seenAt,
+  Store.requests.filter(r => r.status === 'Pending' && inFloor(r.floor)).forEach(r => out.push({ k: 'p' + r.id, t: r.createdAt, ic: 'inbox', a: 'tab', v: 'incoming', ret: true,
+    title: r.long ? `${r.name} wants to borrow for ${Math.round((r.dueAt - r.createdAt) / 864e5)} days` : `${r.name} asks for ${pieces(r)} pieces`, sub: `${r.dept} · ${r.items.map(i => `${i.name} (${i.colour})`).join(', ')} · ${FLOORS[r.floor]} · needs your OK` }));
+  Store.requests.filter(r => r.status === 'Borrowed' && inFloor(r.floor) && (r.createdAt > seenAt || dayLabel(r.createdAt) === 'Today')).forEach(r => out.push({ k: 't' + r.id, t: r.createdAt, ic: 'cart', a: 'tab', v: 'incoming', fresh: r.createdAt > seenAt,
     title: `${r.name} took ${pieces(r)} ${pieces(r) === 1 ? 'piece' : 'pieces'}`, sub: `${r.dept} · ${r.items.map(i => `${i.qty} × ${i.name} (${i.colour})`).join(', ')} · ${FLOORS[r.floor]}` }));
-  Store.returns.filter(x => x.status === 'Pending' && inFloor(x.floor)).forEach(x => out.push({ t: x.createdAt, ic: 'undo', a: 'tab', v: 'returns', ret: true,
-    title: `${x.condition === 'Good' ? 'Item returned' : 'Damage reported'} · ${x.name}`, sub: `${x.qty} × ${x.itemName} (${x.condition}) · ${FLOORS[x.floor]}` }));
-  lowList().filter(l => inFloor(l.fl)).forEach(l => out.push({ t: 0, ic: 'alert', a: 'edit', v: l.m.id, sel: l.v.id, low: true,
+  Store.returns.filter(x => x.status === 'Pending' && inFloor(x.floor)).forEach(x => out.push({ k: 'r' + x.id, t: x.createdAt, ic: 'undo', a: 'tab', v: 'returns', ret: true,
+    title: `Item returned · ${x.name}`, sub: `${x.qty} × ${x.itemName} · ${FLOORS[x.floor]}` }));
+  lowList().filter(l => inFloor(l.fl)).forEach(l => out.push({ k: 'l' + l.key + ':' + ymdIn(0), t: 0, ic: 'alert', a: 'edit', v: l.m.id, sel: l.v.id, low: true,
     title: `Restock needed · ${l.m.name} (${l.v.colour}, ${l.v.size})`, sub: `${FLOORS[l.fl]} · only ${st(l.v, l.fl)} left` }));
   return out.sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || b.t - a.t);
 }
@@ -1307,7 +1433,9 @@ const SCREENS = {
     const hasBorrow = lines.some(l => (l.type || floorDefaultType(l.floor)) === 'borrow');
     if (hasBorrow && !S.due) S.due = ymdIn(7);
     const purposes = ['Class activity', 'Project', 'Competition', 'Assembly / event', 'Teaching aid', 'Other'];
-    const canSend = !warns.length && S.purpose && (!hasBorrow || endOfDay(S.due) >= Date.now());
+    const long = hasBorrow && borrowDays(S.due) > MAX_BORROW_DAYS;
+    const hasIssue = lines.some(l => (l.type || floorDefaultType(l.floor)) === 'issue');
+    const canSend = !warns.length && S.purpose && (!hasBorrow || endOfDay(S.due) >= Date.now()) && (!long || S.note.trim());
     return `<div class="page-h"><h1 class="h1">Cart</h1><button class="link" data-a="clearcart">Clear</button></div>
       <div class="list stagger">${lines.map((l, i) => `<div class="row card" style="--i:${i}">
         <span class="thumb">${l.m ? art(l.m) : ''}</span>
@@ -1318,17 +1446,19 @@ const SCREENS = {
       <div class="opt"><div class="opt-h"><span>What's it for?</span></div>
         <div class="pills">${purposes.map(p => `<button class="chip ${p === S.purpose ? 'on' : ''}" data-a="purpose" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>
         <input class="input" data-in="note" value="${esc(S.note)}" maxlength="140" placeholder="Add a note (optional), e.g. Class 7B science model" aria-label="Note for the store"></div>
-      ${hasBorrow ? `<label class="field"><span>Return borrowed items by</span><input type="date" data-in="due" value="${esc(S.due)}" min="${ymdIn(0)}"></label>
+      ${hasBorrow ? `<label class="field"><span>Return borrowed items by <small class="muted">(up to ${MAX_BORROW_DAYS} days)</small></span><input type="date" data-in="due" value="${esc(S.due)}" min="${ymdIn(0)}"></label>
+        ${long ? `<p class="warn">${icon('alert', 16)} That's ${borrowDays(S.due)} days. Borrowing for more than a week needs the admin's OK — write why in the note above, and your borrow items will be sent as a request.${hasIssue ? ' Issue items are still taken straight away.' : ''}</p>` : ''}
         <p class="hint">${icon('undo', 16)}<span>Only <b>Borrow</b> items need returning. <b>Issue</b> items are yours to keep.</span></p>` : ''}
       <div class="sumrow card"><span class="muted" style="margin:0">Total items</span><b>${totalQty}</b></div>
-      <button class="btn" data-a="send" ${canSend ? '' : 'disabled'}>${S.purpose ? 'Take Items' : 'Choose what it\'s for first'}</button>`;
+      <button class="btn" data-a="send" ${canSend ? '' : 'disabled'}>${!S.purpose ? 'Choose what it\'s for first' : long && !S.note.trim() ? 'Write why in the note first' : long ? (hasIssue ? 'Take issue items & send borrow request' : 'Send request to admin') : 'Take Items'}</button>`;
   },
 
   sent() {
     const fls = [...new Set(S.lastSent.map(l => l.floor))];
     return `<div class="sent">
       <div class="plane">${icon('send', 44)}<span class="ok">${icon('check', 16)}</span></div>
-      <h1 class="h1">All set — take your items!</h1>
+      <h1 class="h1">${S.lastLong && !S.lastSent.some(l => (l.type || floorDefaultType(l.floor)) === 'issue') ? 'Request sent!' : 'All set — take your items!'}</h1>
+      ${S.lastLong ? `<p class="type-note t-borrow">${icon('clock', 16)}<span>Your <b>borrow</b> items need the admin's OK because it's longer than a week. You'll see it in <b>My Items → Requests</b>.</span></p>` : ''}
       <p class="muted" style="max-width:300px">Recorded from the ${fls.map(f => FLOORS[f]).join(' and ')} store${fls.length > 1 ? 's' : ''}. No approval needed — the admin has been notified.</p>
       ${S.lastSent.some(l => (l.type || floorDefaultType(l.floor)) === 'borrow') ? `<p class="type-note t-borrow">${icon('undo', 16)}<span>Please return borrowed items by <b>${dueText(endOfDay(S.lastDue))}</b>.</span></p>` : ''}
       <div class="card items-box"><b style="font-size:14px">Items taken</b>
@@ -1363,7 +1493,7 @@ const SCREENS = {
     const low = lowList().filter(l => inFloor(l.fl));
     const today = takenToday.reduce((a, r) => a + pieces(r), 0);
     const n = notifCount();
-    const menu = [['incoming', 'inbox', 'Who took what', Store.requests.filter(r => r.status === 'Pending' && inFloor(r.floor)).length], ['returns', 'undo', 'Returns & Damage', rets.length], ['inventory', 'grid', 'Manage Inventory', 0], ['history', 'clock', 'Usage History', 0]];
+    const menu = [['incoming', 'inbox', 'Who took what', Store.requests.filter(r => r.status === 'Pending' && inFloor(r.floor)).length], ['returns', 'undo', 'Returns', rets.length + overdueList().filter(r => inFloor(r.floor)).length], ['inventory', 'grid', 'Manage Inventory', 0], ['history', 'clock', 'Usage History', 0]];
     return `<header class="hero"><div><span class="brand"><i></i>${esc(SCHOOL.siteName)} · Admin</span><h1 class="h1" style="margin-top:6px">Resource Room</h1><p class="muted">Ground &amp; First Floor stores</p></div>
       <div style="display:flex;gap:8px"><button class="icon-btn bell" data-a="go" data-v="notifs" aria-label="Notifications">${icon('bell', 20)}${n ? `<span class="badge amber">${n}</span>` : ''}</button>
       <button class="avatar" data-a="account" aria-label="Account">${esc(initials(me().name))}</button></div></header>
@@ -1372,22 +1502,39 @@ const SCREENS = {
         <button class="stat card" data-a="tab" data-v="incoming"><b>${takenToday.length}</b><span>Takes today</span></button>
         <button class="stat card" data-a="tab" data-v="returns"><b>${rets.length}</b><span>Returns to check</span></button>
         <button class="stat card" data-a="lowstock"><b>${low.length}</b><span>Need restocking</span>${low.length ? `<i class="tri">${icon('alert', 20)}</i>` : ''}</button>
-        <button class="stat card" data-a="act" data-v="Overdue"><b>${overdueList().filter(r => inFloor(r.floor)).length}</b><span>Overdue borrows</span>${overdueList().filter(r => inFloor(r.floor)).length ? `<i class="tri">${icon('alert', 20)}</i>` : ''}</button>
+        <button class="stat card" data-a="tab" data-v="returns"><b>${overdueList().filter(r => inFloor(r.floor)).length}</b><span>Overdue borrows</span>${overdueList().filter(r => inFloor(r.floor)).length ? `<i class="tri">${icon('alert', 20)}</i>` : ''}</button>
       </div>
       <div class="menu stagger">${menu.map((x, i) => `<button class="row card" style="--i:${i}" data-a="tab" data-v="${x[0]}"><span class="ic">${icon(x[1], 20)}</span><span class="row-main"><b>${x[2]}</b></span>${x[3] ? `<span class="pill amber">${x[3]}</span>` : ''}${icon('chev', 18)}</button>`).join('')}</div>
       ${reqs.length ? `<div class="page-h"><h2 class="h2">Latest activity</h2><button class="link" data-a="tab" data-v="incoming">See all</button></div><div class="list">${reqs.filter(r => r.status === 'Borrowed').slice(0, 3).map((r, i) => reqCard(r, i, true)).join('')}</div>` : ''}`;
   },
 
   notifs() {
-    const list = notifications();
-    setTimeout(() => keep.set('rrit_seen_' + me().email, String(Date.now())), 0);
+    setTimeout(() => { if (Auth.user) keep.set('rrit_seen_' + me().email, String(Date.now())); }, 0);
     const canAsk = 'Notification' in window && Notification.permission === 'default';
+    const tab = S.notifTab || 'Recent';
+    const recent = recentNotifs();
+    let body;
+    if (tab === 'Recent') {
+      body = (recent.length ? `<button class="link clear-all" data-a="dismissall">Clear all</button>` : '') +
+        `<div class="list stagger">${recent.length ? recent.map((n, i) => `<div class="nrow" style="--i:${i}"><button class="row card" data-a="${n.a}" data-v="${n.v}" ${n.sel ? `data-sel="${n.sel}"` : ''}>
+          <span class="ic-round ${n.low ? 'amber' : ''}">${icon(n.ic, 18)}</span>${n.fresh ? '<span class="new-dot" aria-label="New"></span>' : ''}<span class="row-main"><b>${esc(n.title)}</b><small>${esc(n.sub)}${n.t ? ' · ' + timeAgo(n.t) : ''}</small></span>${icon('chev', 18)}</button>
+          <button class="x-btn" data-a="dismiss" data-v="${esc(n.k)}" aria-label="Clear this notification">${icon('x', 14)}</button></div>`).join('')
+          : '<p class="empty">All caught up — nothing new. Older ones are in History.</p>'}</div>`;
+    } else {
+      const all = historyNotifs();
+      let lastDay = '';
+      body = all.length ? `<div class="list">${all.map(n => {
+        const day = new Date(n.t).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const head = day !== lastDay ? `<h3 class="day-h">${dayLabel(n.t) === 'Today' ? 'Today' : dayLabel(n.t) === 'Yesterday' ? 'Yesterday' : esc(day)}</h3>` : '';
+        lastDay = day;
+        return head + `<div class="row card hist"><span class="ic-round ${n.low ? 'amber' : ''}">${icon(n.ic, 18)}</span><span class="row-main"><b>${esc(n.title)}</b><small>${esc(n.sub)}</small><small class="when">${icon('clock', 12)} ${esc(dateTime(n.t))}</small></span></div>`;
+      }).join('')}</div>` : '<p class="empty">Nothing has happened yet.</p>';
+    }
     return topbar('Notifications') + `
       ${canAsk ? `<button class="btn ghost sm" data-a="askalerts">${icon('bell', 16)} Turn on pop-up alerts on this device</button>` : ''}
+      <div class="tabs two-col">${['Recent', 'History'].map(t => `<button class="${t === tab ? 'on' : ''}" data-a="notiftab" data-v="${t}">${t}${t === 'Recent' && recent.length ? ` (${recent.length})` : ''}</button>`).join('')}</div>
       ${floorSwitch()}
-      <div class="list stagger">${list.length ? list.map((n, i) => `<button class="row card" style="--i:${i}" data-a="${n.a}" data-v="${n.v}" ${n.sel ? `data-sel="${n.sel}"` : ''}>
-        <span class="ic-round ${n.low ? 'amber' : ''}">${icon(n.ic, 18)}</span>${n.fresh ? '<span class="new-dot" aria-label="New"></span>' : ''}<span class="row-main"><b>${esc(n.title)}</b><small>${esc(n.sub)}${n.t ? ' · ' + timeAgo(n.t) : ''}</small></span>${icon('chev', 18)}</button>`).join('')
-        : '<p class="empty">All caught up — nothing needs you right now.</p>'}</div>`;
+      ${body}`;
   },
 
   incoming() {
@@ -1402,14 +1549,23 @@ const SCREENS = {
   },
 
   returns() {
-    const all = Store.returns.filter(x => inFloor(x.floor));
-    const shown = all.filter(x => S.retTab === 'Pending' ? x.status === 'Pending' : x.status !== 'Pending');
-    const damaged = all.filter(x => x.condition !== 'Good').reduce((a, x) => a + x.qty, 0);
-    return `<h1 class="h1">Returns &amp; Damage</h1>${floorSwitch()}
-      <div class="stats"><div class="stat card"><b>${all.filter(x => x.condition === 'Good').reduce((a, x) => a + x.qty, 0)}</b><span>Pieces returned in good condition</span></div>
-        <div class="stat card"><b>${damaged}</b><span>Damaged or broken</span>${damaged ? `<i class="tri">${icon('alert', 20)}</i>` : ''}</div></div>
-      <div class="tabs two-col">${['Pending', 'Checked'].map(t => `<button class="${t === S.retTab ? 'on' : ''}" data-a="rettab" data-v="${t}">${t === 'Pending' ? `To check (${all.filter(x => x.status === 'Pending').length})` : 'Checked'}</button>`).join('')}</div>
-      <div class="list stagger">${shown.length ? shown.map((x, i) => retCard(x, i, true)).join('') : '<p class="empty">Nothing here.</p>'}</div>`;
+    const pending = Store.returns.filter(x => x.status === 'Pending' && inFloor(x.floor));
+    const od = overdueList().filter(r => inFloor(r.floor)).sort((a, b) => a.dueAt - b.dueAt);
+    const done = checkedReturns();
+    const lateCount = done.filter(c => lateDays(c.dueAt, c.returnedAt)).length;
+    const tab = S.retTab === 'Checked' ? 'Checked' : 'Pending';
+    let body;
+    if (tab === 'Pending') {
+      body = (od.length ? `<h2 class="h2 red-t">${icon('alert', 18)} Overdue (${od.length})</h2><p class="muted" style="margin-top:-8px">Tap one to mark it returned.</p><div class="list stagger">${od.map((r, i) => odCard(r, i)).join('')}</div>` : '')
+        + (pending.length ? `<h2 class="h2">Handed back by teachers (${pending.length})</h2><div class="list stagger">${pending.map((x, i) => retCard(x, i, true)).join('')}</div>` : '')
+        + (!od.length && !pending.length ? '<p class="empty">Nothing to check — no overdue items and no returns waiting.</p>' : '');
+    } else body = `<div class="list stagger">${done.length ? done.map((c, i) => doneCard(c, i)).join('') : '<p class="empty">Nothing returned yet.</p>'}</div>`;
+    return `<div class="page-h"><h1 class="h1">Returns</h1><button class="btn ghost sm" style="width:auto;padding:0 14px" data-a="printod">${icon('print', 16)} Print overdue sheet</button></div>${floorSwitch()}
+      <div class="stats three"><div class="stat card"><b>${pending.length + od.length}</b><span>To check</span></div>
+        <div class="stat card"><b>${od.length}</b><span>Overdue now</span>${od.length ? `<i class="tri">${icon('alert', 20)}</i>` : ''}</div>
+        <div class="stat card"><b>${lateCount}</b><span>Returned late</span></div></div>
+      <div class="tabs two-col">${['Pending', 'Checked'].map(t => `<button class="${t === tab ? 'on' : ''}" data-a="rettab" data-v="${t}">${t === 'Pending' ? `To check (${pending.length + od.length})` : `Checked (${done.length})`}</button>`).join('')}</div>
+      ${body}`;
   },
 
   inventory() {
@@ -1515,7 +1671,8 @@ const SCREENS = {
           <small>${esc(r.userEmail)} · ${esc(r.dept)}</small>
           <span style="font-size:14px">${esc(it.name)} (${esc(it.colour)}, ${esc(it.size)}) <b style="color:var(--accent-t)">× ${it.qty}</b> ${floorTag(r.floor)} ${typeTag(recType(r))}</span>
           <small>Purpose: ${esc(r.purpose)}${r.note ? ' — ' + esc(r.note) : ''}</small>
-          ${recType(r) === 'borrow' ? `<small class="${isOverdue(r) && it.qty - back > 0 ? 'late-t' : ''}">Return by ${r.dueAt ? dueText(r.dueAt) : '—'} · ${back >= it.qty ? 'returned' : back ? back + ' returned' : isOverdue(r) ? 'OVERDUE' : 'not returned yet'}</small>` : '<small>Issued — non-returnable</small>'}</div></div>`;
+          ${recType(r) === 'borrow' ? (() => { const at = itemReturnedAt(r, it.variantId), late = back >= it.qty ? lateDays(r.dueAt, at) : lateDays(r.dueAt, Date.now());
+            return `<small class="${late ? 'late-t' : ''}">Due ${r.dueAt ? shortDate(r.dueAt) : '—'} · ${back >= it.qty ? `returned ${shortDate(at)} · ${lateText(late)}${late ? ' (was overdue)' : ''}` : (back ? back + ' returned · ' : '') + (late ? `OVERDUE by ${late} day${late === 1 ? '' : 's'}` : 'not returned yet')}</small>`; })() : '<small>Issued — non-returnable</small>'}</div></div>`;
     }).join('');
     return `<div class="page-h"><h1 class="h1">Usage History</h1>${rows.length ? `<button class="icon-btn" data-a="csv" aria-label="Download as spreadsheet">${icon('download', 20)}</button>` : ''}</div>
       <p class="muted" style="margin-top:-10px">Teacher, email, department, material, quantity, purpose — issued or borrowed.</p>
@@ -1564,7 +1721,7 @@ function navHtml() {
   const active = map[S.screen] || S.screen;
   const items = isAdmin()
     ? [['dash', 'home', 'Home'], ['incoming', 'clip', 'Activity', notifications().filter(n => n.fresh).length + Store.requests.filter(r => r.status === 'Pending' && inFloor(r.floor)).length, 'amber'],
-       ['returns', 'undo', 'Returns', Store.returns.filter(x => x.status === 'Pending' && inFloor(x.floor)).length, 'amber'],
+       ['returns', 'undo', 'Returns', Store.returns.filter(x => x.status === 'Pending' && inFloor(x.floor)).length + overdueList().filter(r => inFloor(r.floor)).length, 'amber'],
        ['inventory', 'grid', 'Inventory'], ['history', 'clock', 'History']]
     : [['home', 'home', 'Home'], ['cart', 'cart', 'Cart', S.cart.length, '', S.bump],
        ['myreqs', 'clip', 'My Items']];
@@ -1621,7 +1778,7 @@ const Watch = {
       if (Auth.user.canAdmin && isAdmin()) {
         Store.requests.forEach(r => { if (!this.seen.has('q' + r.id) && r.status === 'Pending') alertMe('Request for more', `${r.name} (${r.dept}) asks for ${pieces(r)} pieces · ${FLOORS[r.floor]}`, { a: 'tab', v: 'incoming', label: 'View' }); });
         Store.requests.forEach(r => { if (!this.seen.has('q' + r.id) && r.status === 'Borrowed') alertMe(recType(r) === 'borrow' ? 'Items borrowed' : 'Items issued', `${r.name} (${r.dept}) took ${pieces(r)} ${pieces(r) === 1 ? 'piece' : 'pieces'} · ${FLOORS[r.floor]}`, { a: 'tab', v: 'incoming', label: 'View' }); });
-        Store.returns.forEach(x => { if (!this.seen.has('r' + x.id) && x.status === 'Pending') alertMe(x.condition === 'Good' ? 'Item returned' : 'Damage reported', `${x.qty} × ${x.itemName} · ${FLOORS[x.floor]}`, { a: 'tab', v: 'returns', label: 'View' }); });
+        Store.returns.forEach(x => { if (!this.seen.has('r' + x.id) && x.status === 'Pending') alertMe('Item returned', `${x.qty} × ${x.itemName} · ${FLOORS[x.floor]}`, { a: 'tab', v: 'returns', label: 'View' }); });
         lowList().forEach(l => { if (!this.low.has(l.key)) alertMe('Restock needed', `${l.m.name} (${l.v.colour}) · ${FLOORS[l.fl]}: ${st(l.v, l.fl)} left`, { a: 'go', v: 'notifs', label: 'View' }); });
       } else if (!isAdmin()) {
         Store.requests.forEach(r => { const was = this.seen.get('q' + r.id); if (was && was !== r.status && r.userEmail === me().email) alertMe(r.status === 'Borrowed' ? (recType(r) === 'borrow' ? 'Borrowing accepted — you can take it' : 'Issuing accepted — you can take it') : 'Request denied', `${pieces(r)} pcs · ${FLOORS[r.floor]}`, { a: 'tab', v: 'myreqs', label: 'View' }); });
@@ -1630,9 +1787,16 @@ const Watch = {
     }
     if (Auth.user.canAdmin && isAdmin()) {
       const od = overdueList();
-      if (!this.overdue) { if (od.length) alertMe('Overdue borrows', `${od.length} borrowed ${od.length === 1 ? 'item has' : 'items have'} not been returned on time`, { a: 'act', v: 'Overdue', label: 'View' }); }
-      else od.forEach(r => { if (!this.overdue.has(r.id)) alertMe('Overdue', `${r.name} hasn't returned ${r.items.map(i => i.name).join(', ')} (due ${dueText(r.dueAt)})`, { a: 'act', v: 'Overdue', label: 'View' }); });
+      if (!this.overdue) { if (od.length) alertMe('Overdue borrows', `${od.length} borrowed ${od.length === 1 ? 'item has' : 'items have'} not been returned on time`, { a: 'tab', v: 'returns', label: 'View' }); }
+      else od.forEach(r => { if (!this.overdue.has(r.id)) alertMe('Overdue', `${r.name} hasn't returned ${r.items.map(i => i.name).join(', ')} (due ${dueText(r.dueAt)})`, { a: 'tab', v: 'returns', label: 'View' }); });
       this.overdue = new Set(od.map(r => r.id));
+    }
+    if (Auth.user.canAdmin && isAdmin()) {
+      const dayKey = 'rrit_lowday_' + me().email, today = ymdIn(0), lows = lowList();
+      if (lows.length && keep.get(dayKey) !== today) {
+        keep.set(dayKey, today);
+        alertMe('Restock reminder', `${lows.length} ${lows.length === 1 ? 'item is' : 'items are'} still running low`, { a: 'go', v: 'notifs', label: 'View' });
+      }
     }
     this.seen = keys; this.low = low;
   }
@@ -1643,10 +1807,10 @@ setInterval(() => { if (Auth.user && Store.ready) { Watch.check(); if (!typing()
 let toastTimer;
 function toast(msg, action) {
   const el = document.getElementById('toast');
-  el.innerHTML = `<span>${esc(msg)}</span>${action ? `<button data-a="${action.a}" data-v="${action.v || ''}">${esc(action.label)}</button>` : ''}`;
+  el.innerHTML = `<span>${esc(msg)}</span>${action ? `<button data-a="${action.a}" data-v="${action.v || ''}">${esc(action.label)}</button>` : ''}<button class="toast-x" data-a="toastx" aria-label="Close">${icon('x', 14)}</button>`;
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+  toastTimer = setTimeout(() => el.classList.remove('show'), action ? 8000 : 3500);
 }
 
 let modalResolve = null;
@@ -1680,16 +1844,44 @@ function renderMore() {
 }
 function renderReturn() {
   const r = S.ret; if (!r) return;
-  const need = r.condition !== 'Good';
-  openModal(`<h3 class="h2">Return or report</h3>
+  openModal(`<h3 class="h2">Return item</h3>
     <p>${esc(r.item.name)} (${esc(r.item.colour)}, ${esc(r.item.size)}) · ${FLOORS[r.floor]}</p>
-    <div class="opt"><div class="opt-h"><span>How many?</span><b>up to ${r.max}</b></div>${stepper(r.qty, 'ret', 1, r.max)}</div>
-    <div class="opt"><div class="opt-h"><span>Condition</span></div>
-      <div class="pills">${['Good', 'Damaged', 'Broken'].map(c => `<button class="pill-btn ${c === r.condition ? 'on' : ''}" data-a="retcond" data-v="${c}">${c}</button>`).join('')}</div></div>
-    <label class="field"><span>Feedback ${need ? '(what happened?)' : '(optional)'}</span><input data-in="r.feedback" value="${esc(r.feedback)}" maxlength="200" placeholder="${need ? 'e.g. Handle cracked during the activity' : 'Anything the store should know'}"></label>
+    <div class="opt"><div class="opt-h"><span>How many are you returning?</span><b>up to ${r.max}</b></div>${stepper(r.qty, 'ret', 1, r.max)}</div>
+    <label class="field"><span>Note (optional)</span><input data-in="r.feedback" value="${esc(r.feedback)}" maxlength="200" placeholder="Anything the store should know"></label>
     <p id="ret_err" class="warn red" style="display:none"></p>
-    <button class="btn" data-a="sendret">Send to the store</button>
+    <button class="btn" data-a="sendret">Return to the store</button>
     <button class="btn ghost sm" data-a="modal" data-v="0">Cancel</button>`);
+}
+
+// Small box the admin sees when tapping an overdue / borrowed item
+function renderMarkBox(id) {
+  const r = Store.requests.find(x => x.id === id); if (!r) return;
+  const late = lateDays(r.dueAt, Date.now());
+  openModal(`<h3 class="h2">${esc(r.name)}</h3>
+    <p class="muted" style="margin-top:-6px">${esc(r.dept)} · ${esc(r.userEmail)}</p>
+    <ul class="req-items">${r.items.map(it => { const left = it.qty - returnedQty(r.id, it.variantId); return left > 0 ? `<li><span class="dot" style="--c:${hex(it.colour)}"></span><span class="grow">${esc(it.name)} (${esc(it.colour)}) <small>${esc(it.size)}</small></span><b>${left} pcs</b></li>` : ''; }).join('')}</ul>
+    <div class="dates">
+      <span><small>Borrowed</small><b>${shortDate(r.createdAt)}</b></span>
+      <span><small>Due</small><b>${shortDate(r.dueAt)}</b></span>
+      <span class="${late ? 'late-t' : ''}"><small>Overdue</small><b>${late ? late + ' day' + (late === 1 ? '' : 's') : '—'}</b></span>
+    </div>
+    <button class="btn" data-a="markret" data-v="${r.id}">${icon('check', 18)} Returned</button>
+    <button class="btn ghost sm" data-a="modal" data-v="0">Cancel</button>`);
+}
+
+// Printable sheet: everything that was / is overdue
+function printOverdue() {
+  const rows = [];
+  overdueList().filter(r => inFloor(r.floor)).forEach(r => r.items.forEach(it => { const left = it.qty - returnedQty(r.id, it.variantId); if (left > 0)
+    rows.push([r.name, r.dept, `${it.name} (${it.colour})`, left, shortDate(r.createdAt), shortDate(r.dueAt), 'Not returned yet', lateDays(r.dueAt, Date.now())]); }));
+  checkedReturns().filter(c => lateDays(c.dueAt, c.returnedAt)).forEach(c => c.items.forEach(it =>
+    rows.push([c.name, c.dept, `${it.name} (${it.colour})`, it.qty, shortDate(c.borrowedAt), shortDate(c.dueAt), shortDate(c.returnedAt) + ', ' + clock(c.returnedAt), lateDays(c.dueAt, c.returnedAt)])));
+  const el = document.getElementById('print');
+  el.innerHTML = `<h1>${esc(SCHOOL.siteName)} — Overdue report</h1>
+    <p>${esc(SCHOOL.fullName)} · Printed ${esc(dateTime(Date.now()))}${S.floor !== 'All' ? ' · ' + esc(FLOORS[S.floor]) : ''}</p>
+    ${rows.length ? `<table><thead><tr><th>#</th><th>Teacher</th><th>Department</th><th>Item</th><th>Qty</th><th>Borrowed</th><th>Due</th><th>Returned</th><th>Days overdue</th></tr></thead>
+    <tbody>${rows.map((r, i) => `<tr><td>${i + 1}</td>${r.map(c => `<td>${esc(String(c))}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p>No overdue items. 🎉</p>'}`;
+  setTimeout(() => window.print(), 50);
 }
 
 /* =====================================================================
@@ -1699,6 +1891,19 @@ const A = {
   back, tab: v => tab(v), go: v => go(v),
   modal: v => closeModal(v === '1'),
   theme: v => { applyTheme(v); if (document.getElementById('modal').classList.contains('show') && Auth.user) { closeModal(); A.account(); } else render(); },
+  dismiss: v => { dismiss([v]); render(); },
+  odopen: v => renderMarkBox(v),
+  markret: async v => {
+    closeModal();
+    const card = document.getElementById('o_' + v); card?.classList.add('leaving');
+    try { await Store.markReturned(v, me().name); toast('Marked returned — back in stock'); }
+    catch (e) { card?.classList.remove('leaving'); toast(e.message); }
+    render();
+  },
+  printod: () => printOverdue(),
+  dismissall: () => { dismiss(recentNotifs().map(n => n.k)); toast('Cleared — you can still see them in History'); render(); },
+  notiftab: v => { S.notifTab = v; render(); },
+  toastx: () => { clearTimeout(toastTimer); document.getElementById('toast').classList.remove('show'); },
   homefloor: v => { S.homeFloor = v; keep.set('rrit_homefloor', v); render(); },
   act: v => { S.actFilter = v; tab('incoming'); },
   actfilter: v => { S.actFilter = v; render(); },
@@ -1772,7 +1977,7 @@ const A = {
   clearcart: async () => { if (await ask('Clear cart?', 'This removes everything from your cart.', 'Clear', true)) { S.cart = []; saveCart(); render(); } },
   purpose: v => { S.purpose = v; render(); },
   send: async (v, el) => {
-    el.disabled = true; el.textContent = 'Sending…';
+    el.disabled = true; el.textContent = 'Sending…'; S.lastLong = false;
     try {
       const items = S.cart.map(({ materialId, variantId, name, colour, size, qty, floor, type }) => ({ materialId, variantId, name, colour, size, qty, floor, type: type || floorDefaultType(floor) }));
       // one record per store + kind (issue / borrow)
@@ -1782,7 +1987,8 @@ const A = {
         const rec = { userEmail: me().email, name: me().name, dept: me().dept, floor: fl, type,
           items: items.filter(i => i.floor + '|' + (i.type || floorDefaultType(i.floor)) === g).map(({ floor, type, ...rest }) => rest), purpose: S.purpose, note: S.note.trim().slice(0, 140) };
         if (type === 'borrow') rec.dueAt = endOfDay(S.due);
-        await Store.take(rec);
+        if (type === 'borrow' && borrowDays(S.due) > MAX_BORROW_DAYS) { await Store.sendRequest({ ...rec, kind: 'extra', long: true }); S.lastLong = true; }
+        else await Store.take(rec);
       }
       S.lastSent = items; S.lastDue = S.due; S.cart = []; S.purpose = ''; S.note = ''; S.due = ''; saveCart();
       S.stack = []; S.screen = 'sent'; S.dir = 'fade'; render(); window.scrollTo(0, 0);
@@ -1805,7 +2011,7 @@ const A = {
     if (!x.note.trim()) return err('Say why you need more.');
     if (x.type === 'borrow' && endOfDay(x.due) < Date.now()) return err('Choose a return date from today onwards.');
     try {
-      await Store.sendRequest({ kind: 'extra', type: x.type, ...(x.type === 'borrow' ? { dueAt: endOfDay(x.due) } : {}), userEmail: me().email, name: me().name, dept: me().dept, floor: x.floor,
+      await Store.sendRequest({ kind: 'extra', long: x.type === 'borrow' && borrowDays(x.due) > MAX_BORROW_DAYS, type: x.type, ...(x.type === 'borrow' ? { dueAt: endOfDay(x.due) } : {}), userEmail: me().email, name: me().name, dept: me().dept, floor: x.floor,
         items: [{ materialId: x.materialId, variantId: x.variantId, name: x.name, colour: x.colour, size: x.size, qty: x.qty }],
         purpose: x.purpose, note: x.note.trim().slice(0, 160) });
       closeModal(); S.myTab = 'Requests'; toast('Request sent to the admin', { a: 'tab', v: 'myreqs', label: 'View' });
@@ -1820,18 +2026,17 @@ const A = {
   retcond: v => { S.ret.condition = v; renderReturn(); },
   sendret: async () => {
     const r = S.ret;
-    if (r.condition !== 'Good' && !r.feedback.trim()) { const e = document.getElementById('ret_err'); e.textContent = 'Please say what happened to it.'; e.style.display = 'flex'; return; }
     try {
       await Store.sendReturn({ requestId: r.requestId, userEmail: me().email, name: me().name, dept: me().dept, floor: r.floor,
         materialId: r.item.materialId, variantId: r.item.variantId, itemName: r.item.name, colour: r.item.colour, size: r.item.size,
         qty: r.qty, condition: r.condition, feedback: r.feedback.trim().slice(0, 200) });
       closeModal(); S.myTab = 'Returns'; render();
-      toast(r.condition === 'Good' ? 'Return sent to the store' : 'Damage report sent to the store');
+      toast('Return sent — the admin will confirm it');
     } catch (e) { toast('Could not send: ' + e.message); }
   },
   confirmret: async v => {
     const card = document.getElementById('t_' + v); card?.classList.add('leaving');
-    try { await Store.confirmReturn(v, me().name); toast('Return checked'); }
+    try { await Store.confirmReturn(v, me().name); toast('Returned — back in stock'); }
     catch (e) { card?.classList.remove('leaving'); toast(e.message); }
     render();
   },
@@ -1897,11 +2102,12 @@ const A = {
     await Store.deleteCategory(c.id); toast('Category deleted'); back();
   },
   csv: () => {
-    const rows = [['Date', 'Time', 'Teacher', 'Email', 'Department', 'Store', 'Issue / Borrow', 'Material', 'Colour', 'Size', 'Quantity', 'Purpose', 'Note', 'Return by', 'Returned', 'Status']];
+    const rows = [['Date', 'Time', 'Teacher', 'Email', 'Department', 'Store', 'Issue / Borrow', 'Material', 'Colour', 'Size', 'Quantity', 'Purpose', 'Note', 'Return by', 'Returned qty', 'Returned on', 'Days overdue', 'Status']];
     Store.requests.filter(r => r.status === 'Borrowed' && inFloor(r.floor)).forEach(r => r.items.forEach(it => {
       const b = recType(r) === 'borrow', back = returnedQty(r.id, it.variantId);
       rows.push([new Date(r.createdAt).toLocaleDateString(), clock(r.createdAt), r.name, r.userEmail, r.dept, FLOORS[r.floor], b ? 'Borrow' : 'Issue',
         it.name, it.colour, it.size, it.qty, r.purpose, r.note || '', b && r.dueAt ? dueText(r.dueAt) : '', b ? back : 'n/a',
+        b && back >= it.qty ? dateTime(itemReturnedAt(r, it.variantId)) : '', b ? (back >= it.qty ? lateDays(r.dueAt, itemReturnedAt(r, it.variantId)) : lateDays(r.dueAt, Date.now())) : '',
         !b ? (r.kind === 'extra' ? 'Issuing accepted' : 'Issued') : back >= it.qty ? 'Returned' : isOverdue(r) ? 'OVERDUE' : (r.kind === 'extra' ? 'Borrowing accepted' : 'Borrowed')]);
     }));
     const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -1934,7 +2140,15 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => {
   const k = e.target.dataset.in; if (!k) return;
   if (k === 'q') { S.q = e.target.value; document.getElementById('results').innerHTML = homeResults(); return; }
-  if (k === 'note') { S.note = e.target.value; return; }
+  if (k === 'note') {
+    const had = !!S.note.trim(); S.note = e.target.value;
+    // the Send button depends on the note when borrowing for more than a week: redraw, keep typing position
+    if (had !== !!S.note.trim() && S.screen === 'cart' && document.querySelector('[data-a=send]')) {
+      const pos = e.target.selectionStart; render();
+      const n = document.querySelector('[data-in=note]'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) {} }
+    }
+    return;
+  }
   if (k === 'due') { S.due = e.target.value; render(); return; }
   if (k.startsWith('f.')) { S.f[k.slice(2)] = e.target.value; return; }
   if (k.startsWith('r.') && S.ret) { S.ret[k.slice(2)] = e.target.value; return; }
